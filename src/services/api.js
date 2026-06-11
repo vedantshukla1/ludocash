@@ -1,7 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BASE_URL = 'https://hopeful-cyan-lion.66-116-207-123.cpanel.site/api'; // Live cPanel URL
+const BASE_URL = 'https://ludocash.onrender.com/api'; // Live Render URL
 
 const api = axios.create({
   baseURL: BASE_URL,
