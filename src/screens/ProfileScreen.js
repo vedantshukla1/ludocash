@@ -1,0 +1,240 @@
+import React from 'react';
+import {
+  View, Text, StyleSheet, TouchableOpacity,
+  ScrollView, StatusBar, Alert,
+} from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import { useAuth } from '../context/AuthContext';
+import { COLORS, GRADIENTS, SPACING, RADIUS, SHADOWS } from '../utils/theme';
+
+const MENU_ITEMS = [
+  { id: 'history', icon: '📋', label: 'Transaction History', screen: 'Wallet' },
+  { id: 'wins', icon: '🏆', label: 'My Wins', screen: null },
+  { id: 'support', icon: '💬', label: 'Support', screen: null },
+  { id: 'terms', icon: '📄', label: 'Terms & Conditions', screen: null },
+  { id: 'privacy', icon: '🔒', label: 'Privacy Policy', screen: null },
+];
+
+const StatCard = ({ icon, label, value, color }) => (
+  <View style={styles.statCard}>
+    <Text style={styles.statIcon}>{icon}</Text>
+    <Text style={[styles.statValue, color && { color }]}>{value}</Text>
+    <Text style={styles.statLabel}>{label}</Text>
+  </View>
+);
+
+const ProfileScreen = ({ navigation }) => {
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            navigation.replace('Login');
+          },
+        },
+      ],
+    );
+  };
+
+  const handleMenuPress = (item) => {
+    if (item.screen) {
+      navigation.navigate(item.screen);
+      return;
+    }
+    Alert.alert(item.label, 'Coming soon!');
+  };
+
+  const stats = user?.stats || {};
+  const winRate = stats.totalGames > 0
+    ? Math.round((stats.wins / stats.totalGames) * 100)
+    : 0;
+
+  return (
+    <LinearGradient colors={GRADIENTS.background} style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>👤 Profile</Text>
+        </View>
+
+        {/* Avatar + info */}
+        <View style={styles.profileSection}>
+          <View style={styles.avatarContainer}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {user?.name?.[0]?.toUpperCase() || '?'}
+              </Text>
+            </View>
+            <View style={styles.avatarGlow} />
+          </View>
+          <Text style={styles.displayName}>{user?.name || 'Player'}</Text>
+          <Text style={styles.displayEmail}>{user?.email || ''}</Text>
+
+          {/* Wallet mini card */}
+          <View style={styles.walletMini}>
+            <Text style={styles.walletMiniLabel}>💰 Wallet Balance</Text>
+            <Text style={styles.walletMiniAmount}>₹{(user?.wallet?.balance || 0).toFixed(0)}</Text>
+          </View>
+        </View>
+
+        {/* Stats grid */}
+        <View style={styles.statsGrid}>
+          <StatCard icon="🎮" label="Games" value={stats.totalGames || 0} />
+          <StatCard icon="🏆" label="Wins" value={stats.wins || 0} color={COLORS.gold} />
+          <StatCard icon="📊" label="Win Rate" value={`${winRate}%`} color={COLORS.green} />
+          <StatCard
+            icon="💵"
+            label="Earned"
+            value={`₹${(stats.totalEarnings || 0).toFixed(0)}`}
+            color={COLORS.gold}
+          />
+        </View>
+
+        {/* Menu */}
+        <View style={styles.menuSection}>
+          {MENU_ITEMS.map((item, idx) => (
+            <TouchableOpacity
+              key={item.id}
+              style={[styles.menuItem, idx === MENU_ITEMS.length - 1 && styles.menuItemLast]}
+              onPress={() => handleMenuPress(item)}
+            >
+              <Text style={styles.menuIcon}>{item.icon}</Text>
+              <Text style={styles.menuLabel}>{item.label}</Text>
+              <Text style={styles.menuArrow}>›</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Logout */}
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+          <Text style={styles.logoutText}>🚪 Logout</Text>
+        </TouchableOpacity>
+
+        {/* Version */}
+        <Text style={styles.version}>LudoCash v1.0.0 • 18+ Real Money Gaming</Text>
+
+        <View style={{ height: 30 }} />
+      </ScrollView>
+    </LinearGradient>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  header: { padding: SPACING.md, paddingTop: SPACING.lg + 4 },
+  headerTitle: { color: COLORS.gold, fontSize: 16, fontWeight: '900' },
+  profileSection: {
+    alignItems: 'center',
+    paddingVertical: SPACING.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,255,163,0.15)',
+    paddingBottom: SPACING.xl,
+  },
+  avatarContainer: { position: 'relative', marginBottom: SPACING.md },
+  avatar: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: COLORS.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+    ...SHADOWS.gold,
+  },
+  avatarText: { fontSize: 28, fontWeight: '900', color: COLORS.background },
+  avatarGlow: {
+    position: 'absolute',
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    backgroundColor: 'rgba(0,255,163,0.2)',
+    top: -8,
+    left: -8,
+  },
+  displayName: { color: COLORS.white, fontSize: 16, fontWeight: '800', marginBottom: 4 },
+  displayEmail: { color: COLORS.textMuted, fontSize: 10, marginBottom: SPACING.md },
+  walletMini: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    backgroundColor: 'rgba(0,255,163,0.12)',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm + 2,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: 'rgba(0,255,163,0.3)',
+  },
+  walletMiniLabel: { color: COLORS.textSecondary, fontSize: 10 },
+  walletMiniAmount: { color: COLORS.gold, fontWeight: '900', fontSize: 12 },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: SPACING.md,
+    gap: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,255,163,0.15)',
+  },
+  statCard: {
+    flex: 1,
+    minWidth: '44%',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    gap: 4,
+  },
+  statIcon: { fontSize: 16 },
+  statValue: { color: COLORS.white, fontSize: 15, fontWeight: '900' },
+  statLabel: { color: COLORS.textMuted, fontSize: 9 },
+  menuSection: {
+    margin: SPACING.md,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    overflow: 'hidden',
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    padding: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.06)',
+  },
+  menuItemLast: { borderBottomWidth: 0 },
+  menuIcon: { fontSize: 14, width: 26 },
+  menuLabel: { flex: 1, color: COLORS.white, fontSize: 11, fontWeight: '600' },
+  menuArrow: { color: COLORS.textMuted, fontSize: 16, fontWeight: '300' },
+  logoutBtn: {
+    marginHorizontal: SPACING.md,
+    padding: SPACING.md,
+    alignItems: 'center',
+    borderRadius: RADIUS.md,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,68,68,0.4)',
+    backgroundColor: 'rgba(255,68,68,0.08)',
+    marginBottom: SPACING.md,
+  },
+  logoutText: { color: COLORS.error, fontWeight: '700', fontSize: 12 },
+  version: {
+    textAlign: 'center',
+    color: COLORS.textMuted,
+    fontSize: 9,
+    marginBottom: SPACING.sm,
+  },
+});
+
+export default ProfileScreen;

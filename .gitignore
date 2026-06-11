@@ -1,0 +1,27 @@
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Android
+android/app/build/
+android/.gradle/
+android/local.properties
+android/app/debug.keystore
+android/app/release.keystore
+
+# iOS
+ios/Pods/
+ios/build/
+*.xcworkspace
+*.xcodeproj
+
+# React Admin
+admin-dashboard/build/
+admin-dashboard/node_modules/
+backend/node_modules/
