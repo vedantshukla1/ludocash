@@ -137,6 +137,8 @@ const tryStartMatch = async (io, mode, fee) => {
       avatar: p.avatar,
     })),
     gameState,
+    isWaitingToStart: true,
+    countdownVal: 20,
   };
 
   registerActiveGame(game._id.toString(), {
@@ -150,15 +152,51 @@ const tryStartMatch = async (io, mode, fee) => {
   freshUsers.forEach(({ entry, user }, i) => {
     const active = require('./gameHandler').getActiveGame(game._id.toString());
     if (active) {
-      active.sockets[user._id.toString()] = entry.socketId;
+      const userRoom = io.sockets.adapter.rooms.get(`user:${user._id.toString()}`);
+      if (userRoom && userRoom.size > 0) {
+        const [latestSocketId] = userRoom;
+        active.sockets[user._id.toString()] = latestSocketId;
+        const latestSocket = io.sockets.sockets.get(latestSocketId);
+        if (latestSocket) {
+          latestSocket.join(`game:${game._id}`);
+        }
+      } else {
+        active.sockets[user._id.toString()] = entry.socketId;
+        entry.socket.join(`game:${game._id}`);
+      }
     }
 
-    io.to(entry.socketId).emit('game_found', gameData);
-    entry.socket.join(`game:${game._id}`);
+    io.to(`user:${user._id.toString()}`).emit('game_found', gameData);
   });
 
-  const { startTurnTimer } = require('./gameHandler');
-  startTurnTimer(game._id.toString());
+  const active = require('./gameHandler').getActiveGame(game._id.toString());
+  if (active) {
+    active.isWaitingToStart = true;
+    active.countdown = 20;
+
+    io.to(`game:${game._id}`).emit('match_countdown', { seconds: active.countdown });
+
+    const countdownInterval = setInterval(() => {
+      const current = require('./gameHandler').getActiveGame(game._id.toString());
+      if (!current) {
+        clearInterval(countdownInterval);
+        return;
+      }
+
+      current.countdown--;
+      if (current.countdown <= 0) {
+        clearInterval(countdownInterval);
+        current.isWaitingToStart = false;
+        io.to(`game:${game._id}`).emit('match_started');
+        const { startTurnTimer } = require('./gameHandler');
+        startTurnTimer(game._id.toString());
+      } else {
+        io.to(`game:${game._id}`).emit('match_countdown', { seconds: current.countdown });
+      }
+    }, 1000);
+
+    active.countdownInterval = countdownInterval;
+  }
 
   await broadcastWaitingCount(io, mode, fee);
 };

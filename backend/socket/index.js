@@ -13,6 +13,7 @@ const {
   handleSendEmoji,
   handleReconnectGame,
   handleGameDisconnect,
+  getActiveGameByUserId,
 } = require('./gameHandler');
 
 const initSocket = (io) => {
@@ -39,6 +40,36 @@ const initSocket = (io) => {
 
   io.on('connection', (socket) => {
     console.log(`Socket connected: ${socket.id} (user: ${socket.userId})`);
+    
+    // Join user-specific room
+    socket.join(`user:${socket.userId}`);
+
+    // Check for active game on connection
+    const active = getActiveGameByUserId(socket.userId);
+    if (active) {
+      active.sockets[socket.userId] = socket.id;
+      const player = active.game.players.find((p) => p.userId.toString() === socket.userId);
+      if (player) player.disconnected = false;
+      socket.join(`game:${active.game._id}`);
+
+      const gameData = {
+        gameId: active.game._id.toString(),
+        mode: active.game.mode,
+        entryFee: active.game.entryFee,
+        prizePool: active.game.prizePool,
+        players: active.game.players.map((p) => ({
+          userId: p.userId,
+          color: p.color,
+          name: p.name,
+          avatar: p.avatar,
+        })),
+        gameState: active.gameState,
+        isWaitingToStart: active.isWaitingToStart || false,
+        countdownVal: active.countdown || 0,
+      };
+      
+      socket.emit('game_found', gameData);
+    }
 
     socket.on('join_pool', (data) => handleJoinPool(socket, io, data));
     socket.on('cancel_pool', (data) => handleCancelPool(socket, io, data));

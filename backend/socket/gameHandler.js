@@ -19,6 +19,15 @@ const activeGames = new Map();
 
 const getActiveGame = (gameId) => activeGames.get(gameId);
 
+const getActiveGameByUserId = (userId) => {
+  for (const [gameId, active] of activeGames.entries()) {
+    if (active.game.players.some((p) => p.userId.toString() === userId.toString())) {
+      return active;
+    }
+  }
+  return null;
+};
+
 const registerActiveGame = (gameId, data) => {
   activeGames.set(gameId, data);
 };
@@ -26,6 +35,7 @@ const registerActiveGame = (gameId, data) => {
 const removeActiveGame = (gameId) => {
   const game = activeGames.get(gameId);
   if (game?.turnTimer) clearTimeout(game.turnTimer);
+  if (game?.countdownInterval) clearInterval(game.countdownInterval);
   activeGames.delete(gameId);
 };
 
@@ -156,27 +166,35 @@ const autoRollAndMove = async (gameId) => {
   if (!active) return;
 
   const color = active.gameState.currentTurn;
-  const dice = rollDice();
-  active.gameState.diceValue = dice;
   active.gameState.diceRolled = true;
 
-  const movable = getMovablePieces(active.gameState, color, dice);
+  emitToGame(gameId, 'dice_roll_start', { color });
 
-  emitToGame(gameId, 'dice_result', {
-    color,
-    dice,
-    movablePieces: movable,
-    autoRolled: true,
-  });
+  setTimeout(async () => {
+    const current = activeGames.get(gameId);
+    if (!current || current.gameState.currentTurn !== color) return;
 
-  if (movable.length === 0) {
-    const extraTurn = dice === 6;
-    setTimeout(() => advanceTurn(gameId, extraTurn, 'no_move'), 800);
-    return;
-  }
+    const dice = rollDice();
+    current.gameState.diceValue = dice;
 
-  const pieceId = movable[0];
-  await applyMove(gameId, color, pieceId, true);
+    const movable = getMovablePieces(current.gameState, color, dice);
+
+    emitToGame(gameId, 'dice_result', {
+      color,
+      dice,
+      movablePieces: movable,
+      autoRolled: true,
+    });
+
+    if (movable.length === 0) {
+      const extraTurn = dice === 6;
+      setTimeout(() => advanceTurn(gameId, extraTurn, 'no_move'), 800);
+      return;
+    }
+
+    const pieceId = movable[0];
+    await applyMove(gameId, color, pieceId, true);
+  }, 800);
 };
 
 const applyMove = async (gameId, color, pieceId, autoMove = false) => {
@@ -296,39 +314,48 @@ const handleRollDice = async (socket, { gameId }) => {
 
   if (active.turnTimer) clearTimeout(active.turnTimer);
 
-  const dice = rollDice();
-  active.gameState.diceValue = dice;
   active.gameState.diceRolled = true;
 
-  if (dice === 6) {
-    active.gameState.consecutiveSixes = (active.gameState.consecutiveSixes || 0) + 1;
-    if (active.gameState.consecutiveSixes >= 3) {
-      active.gameState.consecutiveSixes = 0;
-      active.gameState.diceRolled = false;
-      active.gameState.diceValue = null;
-      emitToGame(gameId, 'dice_result', { color, dice, movablePieces: [], skipped: true });
-      return advanceTurn(gameId, false, 'three_sixes');
+  // Broadcast roll start to all players
+  emitToGame(gameId, 'dice_roll_start', { color });
+
+  setTimeout(async () => {
+    const current = activeGames.get(gameId);
+    if (!current || current.gameState.currentTurn !== color) return;
+
+    const dice = rollDice();
+    current.gameState.diceValue = dice;
+
+    if (dice === 6) {
+      current.gameState.consecutiveSixes = (current.gameState.consecutiveSixes || 0) + 1;
+      if (current.gameState.consecutiveSixes >= 3) {
+        current.gameState.consecutiveSixes = 0;
+        current.gameState.diceRolled = false;
+        current.gameState.diceValue = null;
+        emitToGame(gameId, 'dice_result', { color, dice, movablePieces: [], skipped: true });
+        return advanceTurn(gameId, false, 'three_sixes');
+      }
+    } else {
+      current.gameState.consecutiveSixes = 0;
     }
-  } else {
-    active.gameState.consecutiveSixes = 0;
-  }
 
-  const movable = getMovablePieces(active.gameState, color, dice);
+    const movable = getMovablePieces(current.gameState, color, dice);
 
-  emitToGame(gameId, 'dice_result', {
-    color,
-    dice,
-    movablePieces: movable,
-    autoRolled: false,
-  });
+    emitToGame(gameId, 'dice_result', {
+      color,
+      dice,
+      movablePieces: movable,
+      autoRolled: false,
+    });
 
-  await saveGameState(gameId);
+    await saveGameState(gameId);
 
-  if (movable.length === 0) {
-    setTimeout(() => advanceTurn(gameId, dice === 6, 'no_move'), 1000);
-  } else {
-    startTurnTimer(gameId);
-  }
+    if (movable.length === 0) {
+      setTimeout(() => advanceTurn(gameId, dice === 6, 'no_move'), 1000);
+    } else {
+      startTurnTimer(gameId);
+    }
+  }, 800);
 };
 
 const handleMovePiece = async (socket, { gameId, pieceId }) => {
@@ -414,6 +441,7 @@ const handleGameDisconnect = (socket, io) => {
 
 module.exports = {
   getActiveGame,
+  getActiveGameByUserId,
   registerActiveGame,
   removeActiveGame,
   startTurnTimer,

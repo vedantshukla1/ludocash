@@ -55,6 +55,7 @@ const GameScreen = ({ route, navigation }) => {
   const [disconnected, setDisconnected] = useState(false);
   const [timeoutCounts, setTimeoutCounts] = useState({ red: 0, blue: 0, green: 0, yellow: 0 });
   const [disqualifiedColors, setDisqualifiedColors] = useState([]);
+  const [matchCountdown, setMatchCountdown] = useState(gameData.isWaitingToStart ? (gameData.countdownVal || 20) : 0);
 
   const timerRef = useRef(null);
   const emojiTimeouts = useRef([]);
@@ -67,7 +68,9 @@ const GameScreen = ({ route, navigation }) => {
     if (myPlayer) setMyColor(myPlayer.color);
 
     setupSocketListeners();
-    startTurnTimer();
+    if (!gameData.isWaitingToStart) {
+      startTurnTimer();
+    }
 
     // Block back button during game
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -312,6 +315,35 @@ const GameScreen = ({ route, navigation }) => {
       // Attempt to rejoin
       emit('reconnect_game', { gameId: gameData.gameId });
     });
+
+    socket.on('match_countdown', ({ seconds }) => {
+      if (!mountedRef.current) return;
+      setMatchCountdown(seconds);
+    });
+
+    socket.on('match_started', () => {
+      if (!mountedRef.current) return;
+      setMatchCountdown(0);
+      startTurnTimer();
+    });
+
+    socket.on('dice_roll_start', ({ color }) => {
+      if (!mountedRef.current) return;
+      setRollingDice(true);
+    });
+
+    socket.on('game_state_update', ({ gameId, gameState: updatedState, players: updatedPlayers }) => {
+      if (!mountedRef.current) return;
+      setGameState(updatedState);
+      if (updatedPlayers) setPlayers(updatedPlayers);
+      setRollingDice(false);
+    });
+
+    socket.on('error_event', ({ message }) => {
+      if (!mountedRef.current) return;
+      setRollingDice(false);
+      Alert.alert('Game Error', message);
+    });
   };
 
   const removeSocketListeners = () => {
@@ -319,7 +351,8 @@ const GameScreen = ({ route, navigation }) => {
     if (!socket) return;
     ['dice_result', 'piece_moved', 'piece_killed', 'piece_home', 'turn_change',
       'game_over', 'receive_emoji', 'opponent_left', 'opponent_reconnected',
-      'turn_timeout', 'player_disqualified'].forEach(
+      'turn_timeout', 'player_disqualified', 'match_countdown', 'match_started',
+      'dice_roll_start', 'game_state_update', 'error_event'].forEach(
       (evt) => socket.off(evt),
     );
     emojiTimeouts.current.forEach(clearTimeout);
@@ -524,6 +557,19 @@ const GameScreen = ({ route, navigation }) => {
           ))}
         </View>
       </View>
+
+      {matchCountdown > 0 && (
+        <View style={styles.countdownOverlay} pointerEvents="auto">
+          <LinearGradient colors={['rgba(11, 27, 61, 0.95)', 'rgba(28, 61, 125, 0.95)']} style={styles.countdownContent}>
+            <Text style={styles.countdownTitle}>🎯 MATCH FOUND!</Text>
+            <Text style={styles.countdownSubtitle}>Get ready to play</Text>
+            <View style={styles.countdownCircle}>
+              <Text style={styles.countdownNumber}>{matchCountdown}</Text>
+            </View>
+            <Text style={styles.countdownFooter}>Starting match...</Text>
+          </LinearGradient>
+        </View>
+      )}
     </LinearGradient>
   );
 };
@@ -727,6 +773,63 @@ const styles = StyleSheet.create({
   timeoutDotMissed: {
     borderColor: '#D50000',
     backgroundColor: '#D50000',
+  },
+  countdownOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    zIndex: 9999,
+  },
+  countdownContent: {
+    paddingHorizontal: 32,
+    paddingVertical: 40,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 215, 0, 0.4)',
+    alignItems: 'center',
+    width: '80%',
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  countdownTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#FFD700',
+    letterSpacing: 1,
+    marginBottom: 6,
+  },
+  countdownSubtitle: {
+    fontSize: 12,
+    color: '#E0E0E0',
+    marginBottom: 24,
+    fontWeight: '500',
+  },
+  countdownCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: '#FFD700',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 215, 0, 0.08)',
+    marginBottom: 24,
+  },
+  countdownNumber: {
+    fontSize: 36,
+    fontWeight: '900',
+    color: '#FFD700',
+  },
+  countdownFooter: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#8A9DBE',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
 });
 
