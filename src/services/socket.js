@@ -1,7 +1,7 @@
 import { io } from 'socket.io-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const SOCKET_URL = 'http://localhost:5000';
+const SOCKET_URL = 'https://ludocash.onrender.com';
 
 let socket = null;
 
