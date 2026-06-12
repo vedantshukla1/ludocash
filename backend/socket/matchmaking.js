@@ -177,7 +177,7 @@ const handleJoinPool = async (socket, io, { mode, fee }) => {
     return socket.emit('error_event', { message: 'Already in pool' });
   }
 
-  pool.push({ userId, socketId: socket.id });
+  pool.push({ userId, socketId: socket.id, socket });
   pools.set(key, pool);
 
   socket.emit('pool_joined', { position: pool.length });
