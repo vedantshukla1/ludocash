@@ -15,11 +15,28 @@ const getPoolCount = (mode, fee) => {
   return pool ? pool.length : 0;
 };
 
-const broadcastWaitingCount = (io, mode, fee) => {
-  const count = getPoolCount(mode, fee);
+const broadcastWaitingCount = async (io, mode, fee) => {
   const pool = pools.get(poolKey(mode, fee)) || [];
+  const count = pool.length;
+  
+  const users = [];
+  for (const entry of pool) {
+    try {
+      const user = await User.findById(entry.userId).select('name avatar');
+      if (user) {
+        users.push({
+          userId: user._id.toString(),
+          name: user.name,
+          avatar: user.avatar,
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching user for pool info:', err);
+    }
+  }
+
   pool.forEach((entry) => {
-    io.to(entry.socketId).emit('waiting_count', { count });
+    io.to(entry.socketId).emit('waiting_count', { count, users });
   });
 };
 
@@ -73,7 +90,7 @@ const tryStartMatch = async (io, mode, fee) => {
       pool.push(entry);
       pools.set(key, pool);
     });
-    broadcastWaitingCount(io, mode, fee);
+    await broadcastWaitingCount(io, mode, fee);
     return;
   }
 
@@ -143,7 +160,7 @@ const tryStartMatch = async (io, mode, fee) => {
   const { startTurnTimer } = require('./gameHandler');
   startTurnTimer(game._id.toString());
 
-  broadcastWaitingCount(io, mode, fee);
+  await broadcastWaitingCount(io, mode, fee);
 };
 
 const handleJoinPool = async (socket, io, { mode, fee }) => {
@@ -168,7 +185,7 @@ const handleJoinPool = async (socket, io, { mode, fee }) => {
   }
 
   const existing = removeFromAllPools(userId);
-  if (existing) broadcastWaitingCount(io, existing.mode, existing.fee);
+  if (existing) await broadcastWaitingCount(io, existing.mode, existing.fee);
 
   const key = poolKey(mode, fee);
   const pool = pools.get(key) || [];
@@ -181,12 +198,12 @@ const handleJoinPool = async (socket, io, { mode, fee }) => {
   pools.set(key, pool);
 
   socket.emit('pool_joined', { position: pool.length });
-  broadcastWaitingCount(io, mode, fee);
+  await broadcastWaitingCount(io, mode, fee);
 
   await tryStartMatch(io, mode, fee);
 };
 
-const handleCancelPool = (socket, io, { mode, fee }) => {
+const handleCancelPool = async (socket, io, { mode, fee }) => {
   const key = poolKey(mode, fee);
   const pool = pools.get(key);
   if (!pool) return;
@@ -195,11 +212,11 @@ const handleCancelPool = (socket, io, { mode, fee }) => {
   if (idx !== -1) {
     pool.splice(idx, 1);
     if (pool.length === 0) pools.delete(key);
-    broadcastWaitingCount(io, mode, fee);
+    await broadcastWaitingCount(io, mode, fee);
   }
 };
 
-const handleDisconnectFromPools = (socket, io) => {
+const handleDisconnectFromPools = async (socket, io) => {
   for (const [key, pool] of pools.entries()) {
     const idx = pool.findIndex((p) => p.socketId === socket.id);
     if (idx !== -1) {
@@ -207,7 +224,7 @@ const handleDisconnectFromPools = (socket, io) => {
       if (pool.length === 0) pools.delete(key);
       else {
         const [mode, fee] = key.split(':');
-        broadcastWaitingCount(io, mode, parseInt(fee, 10));
+        await broadcastWaitingCount(io, mode, parseInt(fee, 10));
       }
       break;
     }

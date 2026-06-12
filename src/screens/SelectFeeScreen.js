@@ -36,6 +36,7 @@ const SelectFeeScreen = ({ route, navigation }) => {
   const [selectedFee, setSelectedFee] = useState(preselectedFee || options[0]?.fee);
   const [searching, setSearching] = useState(false);
   const [waitingCount, setWaitingCount] = useState(0);
+  const [waitingUsers, setWaitingUsers] = useState([]);
 
   const searchAnim = useRef(new Animated.Value(0)).current;
   const dotAnims = useRef([0, 1, 2].map(() => new Animated.Value(0))).current;
@@ -92,8 +93,12 @@ const SelectFeeScreen = ({ route, navigation }) => {
         setSearching(true);
       });
 
-      socket.on('waiting_count', ({ count }) => {
+      socket.on('waiting_count', ({ count, users }) => {
         setWaitingCount(count);
+        if (users) {
+          const opponents = users.filter((u) => u.userId !== user?._id?.toString());
+          setWaitingUsers(opponents);
+        }
       });
 
       socket.on('game_found', (gameData) => {
@@ -131,6 +136,7 @@ const SelectFeeScreen = ({ route, navigation }) => {
     }
     setSearching(false);
     setWaitingCount(0);
+    setWaitingUsers([]);
   };
 
   const selectedOption = options.find((o) => o.fee === selectedFee);
@@ -226,6 +232,17 @@ const SelectFeeScreen = ({ route, navigation }) => {
             <Text style={styles.searchingCount}>
               {waitingCount} player{waitingCount !== 1 ? 's' : ''} in queue
             </Text>
+            {waitingUsers.length > 0 && (
+              <View style={styles.opponentList}>
+                <Text style={styles.opponentListTitle}>Opponents in Queue:</Text>
+                {waitingUsers.map((opp, idx) => (
+                  <View key={idx} style={styles.opponentCard}>
+                    <Text style={styles.opponentCardEmoji}>👤</Text>
+                    <Text style={styles.opponentCardName}>{opp.name}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
         )}
 
@@ -383,7 +400,12 @@ const styles = StyleSheet.create({
   searchingDots: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.md },
   dot: { width: 14, height: 14, borderRadius: 7, backgroundColor: COLORS.gold },
   searchingText: { color: COLORS.white, fontSize: 14, fontWeight: '700', marginBottom: 6 },
-  searchingCount: { color: COLORS.textSecondary, fontSize: 11 },
+  searchingCount: { color: COLORS.textSecondary, fontSize: 11, marginBottom: SPACING.md },
+  opponentList: { marginTop: SPACING.md, alignItems: 'center', width: '100%', paddingHorizontal: SPACING.lg },
+  opponentListTitle: { color: COLORS.gold, fontSize: 10, fontWeight: '800', letterSpacing: 0.5, marginBottom: 8, textTransform: 'uppercase' },
+  opponentCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 215, 0, 0.1)', paddingVertical: 8, paddingHorizontal: 16, borderRadius: RADIUS.md, borderWidth: 1, borderColor: 'rgba(255, 215, 0, 0.25)', minWidth: 160, justifyContent: 'center', gap: 8 },
+  opponentCardEmoji: { fontSize: 14 },
+  opponentCardName: { color: COLORS.white, fontSize: 13, fontWeight: '700' },
   findBtn: { borderRadius: RADIUS.md, overflow: 'hidden', marginTop: SPACING.md },
   findBtnGrad: { padding: SPACING.md + 2, alignItems: 'center', borderRadius: RADIUS.md },
   findBtnText: { color: '#0B1B3D', fontSize: 13, fontWeight: '900', letterSpacing: 1 },
