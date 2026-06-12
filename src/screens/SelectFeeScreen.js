@@ -116,7 +116,7 @@ const SelectFeeScreen = ({ route, navigation }) => {
 
       emit('join_pool', { mode: mode.id, fee: selectedFee });
     } catch (err) {
-      Alert.alert('Connection Error', 'Failed to connect. Check your internet connection.');
+      Alert.alert('Connection Error', err.message || 'Failed to connect. Check your internet connection.');
       setSearching(false);
     }
   };
