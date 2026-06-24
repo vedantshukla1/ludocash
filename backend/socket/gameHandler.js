@@ -86,15 +86,29 @@ const endGame = async (gameId, winnerColor) => {
   if (!winnerPlayer) return;
 
   const winnerId = winnerPlayer.userId;
-  const { user: winnerUser, netAmount, tdsAmount } = await creditWinnings(
-    winnerId,
-    active.game.prizePool,
-    gameId,
-  );
+  
+  let winnerUser = null;
+  let netAmount = active.game.prizePool;
+  let tdsAmount = 0;
+
+  if (!winnerPlayer.isBot) {
+    try {
+      const res = await creditWinnings(winnerId, active.game.prizePool, gameId);
+      winnerUser = res.user;
+      netAmount = res.netAmount;
+      tdsAmount = res.tdsAmount;
+    } catch (e) {
+      console.error('Error crediting winnings:', e);
+    }
+  }
 
   for (const player of active.game.players) {
-    if (player.userId.toString() !== winnerId.toString()) {
-      await recordLoss(player.userId, gameId);
+    if (player.userId.toString() !== winnerId.toString() && !player.isBot) {
+      try {
+        await recordLoss(player.userId, gameId);
+      } catch (e) {
+        console.error('Error recording loss:', e);
+      }
     }
   }
 
@@ -120,8 +134,8 @@ const endGame = async (gameId, winnerColor) => {
     },
     players: active.game.players,
     prizePool: active.game.prizePool,
-    wallet: winnerUser.wallet,
-    stats: winnerUser.stats,
+    wallet: winnerUser ? winnerUser.wallet : { balance: 0, withdrawable: 0, bonus: 0 },
+    stats: winnerUser ? winnerUser.stats : {},
   };
 
   emitToGame(gameId, 'game_over', result);
