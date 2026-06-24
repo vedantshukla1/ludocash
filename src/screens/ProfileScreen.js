@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, StatusBar, Alert,
+  ScrollView, StatusBar, Alert, Switch,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { COLORS, GRADIENTS, SPACING, RADIUS, SHADOWS } from '../utils/theme';
+import { toggleMusic, toggleSfx, isMusicEnabled, isSfxEnabled } from '../utils/sounds';
 
 const MENU_ITEMS = [
   { id: 'history', icon: '📋', label: 'Transaction History', screen: 'Wallet' },
@@ -25,6 +26,11 @@ const StatCard = ({ icon, label, value, color }) => (
 
 const ProfileScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
+  const [musicOn, setMusicOn] = useState(isMusicEnabled());
+  const [sfxOn, setSfxOn] = useState(isSfxEnabled());
+
+  const handleToggleMusic = () => setMusicOn(toggleMusic());
+  const handleToggleSfx = () => setSfxOn(toggleSfx());
 
   const handleLogout = () => {
     Alert.alert(
@@ -98,6 +104,30 @@ const ProfileScreen = ({ navigation }) => {
             value={`₹${(stats.totalEarnings || 0).toFixed(0)}`}
             color={COLORS.gold}
           />
+        </View>
+
+        {/* Settings */}
+        <View style={styles.menuSection}>
+          <View style={styles.menuItem}>
+            <Text style={styles.menuIcon}>🎵</Text>
+            <Text style={styles.menuLabel}>Background Music</Text>
+            <Switch
+              value={musicOn}
+              onValueChange={handleToggleMusic}
+              trackColor={{ false: '#333', true: COLORS.green }}
+              thumbColor={COLORS.white}
+            />
+          </View>
+          <View style={[styles.menuItem, styles.menuItemLast]}>
+            <Text style={styles.menuIcon}>🔊</Text>
+            <Text style={styles.menuLabel}>Sound Effects & Haptics</Text>
+            <Switch
+              value={sfxOn}
+              onValueChange={handleToggleSfx}
+              trackColor={{ false: '#333', true: COLORS.green }}
+              thumbColor={COLORS.white}
+            />
+          </View>
         </View>
 
         {/* Menu */}

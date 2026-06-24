@@ -153,11 +153,22 @@ const GameScreen = ({ route, navigation }) => {
       setRollingDice(false);
       setMovablePieces(mp || []);
       playSound('dice');
+
+      if (dice === 6) {
+        Vibration.vibrate([0, 60, 60, 60]); // Haptic feedback pattern for rolling a 6
+      }
+
+      if (mp && mp.length > 0) {
+        startTurnTimer(); // Reset frontend timer to sync with backend's 20s reset after roll
+      }
+
       setGameState((prev) => ({ ...prev, diceValue: dice, diceRolled: true }));
     });
 
     socket.on('piece_moved', ({ color, pieceId, newState, newPosition, toPos, autoMove }) => {
       if (!mountedRef.current) return;
+      
+      Vibration.vibrate(30); // Light haptic feedback for every piece movement
 
       setGameState((prev) => {
         if (!prev) return prev;
@@ -503,14 +514,11 @@ const GameScreen = ({ route, navigation }) => {
         <View style={styles.turnInfo}>
           <View style={[styles.turnDot, { backgroundColor: PLAYER_COLORS[gameState?.currentTurn]?.primary || COLORS.white }]} />
           <Text style={styles.turnText}>
-            {isMyTurn ? 'Your Turn' : `${currentPlayer?.name || '?'}'s Turn`}
+            {isMyTurn ? 'Your Turn' : `${currentPlayer?.name || '?'}'s Turn`} ({timeLeft}s)
           </Text>
         </View>
 
         <View style={styles.topRightControls}>
-          <View style={[styles.timerChip, { borderColor: timerColor }]}>
-            <Text style={[styles.timerText, { color: timerColor }]}>{timeLeft}s</Text>
-          </View>
           <TouchableOpacity onPress={handleToggleMusic} style={styles.soundToggleBtn}>
             <Text style={styles.soundToggleText}>{musicOn ? '🎵' : '🔇'}</Text>
           </TouchableOpacity>

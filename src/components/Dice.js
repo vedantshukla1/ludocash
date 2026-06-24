@@ -13,7 +13,9 @@ const DICE_FACES = {
 };
 
 const DiceComponent = ({ value, rolling, onPress, disabled, size = 62 }) => {
-  const spinAnim = useRef(new Animated.Value(0)).current;
+  const spinXAnim = useRef(new Animated.Value(0)).current;
+  const spinYAnim = useRef(new Animated.Value(0)).current;
+  const spinZAnim = useRef(new Animated.Value(0)).current;
   const jumpAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const shakeXAnim = useRef(new Animated.Value(0)).current;
@@ -27,33 +29,50 @@ const DiceComponent = ({ value, rolling, onPress, disabled, size = 62 }) => {
       // Rapidly shuffle the visible dice faces to simulate the spinning cube
       interval = setInterval(() => {
         setTempValue(Math.floor(Math.random() * 6) + 1);
-      }, 70);
+      }, 50);
 
       // Reset values
-      spinAnim.setValue(0);
+      spinXAnim.setValue(0);
+      spinYAnim.setValue(0);
+      spinZAnim.setValue(0);
       jumpAnim.setValue(0);
       scaleAnim.setValue(1);
       shakeXAnim.setValue(0);
 
-      // Start looping 3D physics animations
+      // Start chaotic 3D physics animations
       Animated.parallel([
-        // Continuous rotation
-        Animated.loop(
-          Animated.timing(spinAnim, { toValue: 1, duration: 350, useNativeDriver: true })
-        ),
-        // Rhythmic jumping arches
         Animated.loop(
           Animated.sequence([
-            Animated.timing(jumpAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
-            Animated.timing(jumpAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
+            Animated.timing(spinXAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+            Animated.timing(spinXAnim, { toValue: 2, duration: 300, useNativeDriver: true }),
+            Animated.timing(spinXAnim, { toValue: 0, duration: 0, useNativeDriver: true }),
           ])
         ),
-        // Horizontal vibration/shake
         Animated.loop(
           Animated.sequence([
-            Animated.timing(shakeXAnim, { toValue: 6, duration: 80, useNativeDriver: true }),
-            Animated.timing(shakeXAnim, { toValue: -6, duration: 80, useNativeDriver: true }),
-            Animated.timing(shakeXAnim, { toValue: 0, duration: 80, useNativeDriver: true }),
+            Animated.timing(spinYAnim, { toValue: 1, duration: 350, useNativeDriver: true }),
+            Animated.timing(spinYAnim, { toValue: 2, duration: 250, useNativeDriver: true }),
+            Animated.timing(spinYAnim, { toValue: 0, duration: 0, useNativeDriver: true }),
+          ])
+        ),
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(spinZAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+            Animated.timing(spinZAnim, { toValue: 2, duration: 300, useNativeDriver: true }),
+            Animated.timing(spinZAnim, { toValue: 0, duration: 0, useNativeDriver: true }),
+          ])
+        ),
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(jumpAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
+            Animated.timing(jumpAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+          ])
+        ),
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(shakeXAnim, { toValue: 4, duration: 60, useNativeDriver: true }),
+            Animated.timing(shakeXAnim, { toValue: -4, duration: 60, useNativeDriver: true }),
+            Animated.timing(shakeXAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
           ])
         ),
       ]).start();
@@ -61,11 +80,19 @@ const DiceComponent = ({ value, rolling, onPress, disabled, size = 62 }) => {
       if (interval) clearInterval(interval);
       setTempValue(null);
 
-      // Gracefully snap back animations
-      spinAnim.stopAnimation(() => spinAnim.setValue(0));
-      jumpAnim.stopAnimation(() => jumpAnim.setValue(0));
-      shakeXAnim.stopAnimation(() => shakeXAnim.setValue(0));
-      Animated.spring(scaleAnim, { toValue: 1, friction: 5, useNativeDriver: true }).start();
+      // Gracefully snap back animations with a bouncy finish
+      Animated.parallel([
+        Animated.spring(spinXAnim, { toValue: Math.round(spinXAnim._value) + 1, friction: 5, tension: 80, useNativeDriver: true }),
+        Animated.spring(spinYAnim, { toValue: Math.round(spinYAnim._value) + 1, friction: 4, tension: 60, useNativeDriver: true }),
+        Animated.spring(spinZAnim, { toValue: Math.round(spinZAnim._value) + 1, friction: 5, tension: 70, useNativeDriver: true }),
+        Animated.spring(jumpAnim, { toValue: 0, friction: 4, tension: 100, useNativeDriver: true }),
+        Animated.spring(shakeXAnim, { toValue: 0, friction: 6, useNativeDriver: true }),
+        Animated.spring(scaleAnim, { toValue: 1, friction: 3, tension: 150, useNativeDriver: true }),
+      ]).start(() => {
+        spinXAnim.setValue(0);
+        spinYAnim.setValue(0);
+        spinZAnim.setValue(0);
+      });
     }
     return () => {
       if (interval) clearInterval(interval);
@@ -88,18 +115,18 @@ const DiceComponent = ({ value, rolling, onPress, disabled, size = 62 }) => {
     }
   }, [disabled, rolling]);
 
-  // Interpolated rotations for a premium 3D effect
-  const rotateX = spinAnim.interpolate({
-    inputRange: [0, 0.5, 1],
+  // Independent rotations for a highly chaotic tumbling 3D effect
+  const rotateX = spinXAnim.interpolate({
+    inputRange: [0, 1, 2],
+    outputRange: ['0deg', '360deg', '720deg'],
+  });
+  const rotateY = spinYAnim.interpolate({
+    inputRange: [0, 1, 2],
+    outputRange: ['0deg', '360deg', '720deg'],
+  });
+  const rotateZ = spinZAnim.interpolate({
+    inputRange: [0, 1, 2],
     outputRange: ['0deg', '180deg', '360deg'],
-  });
-  const rotateY = spinAnim.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: ['0deg', '270deg', '540deg'],
-  });
-  const rotateZ = spinAnim.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: ['0deg', '90deg', '180deg'],
   });
 
   // Squash/stretch scaling on jumps
