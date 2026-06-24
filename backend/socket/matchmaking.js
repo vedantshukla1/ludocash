@@ -97,6 +97,16 @@ const tryStartMatch = async (io, mode, fee) => {
 
   const freshUsers = [];
   for (const entry of matched) {
+    if (entry.isBot) {
+      const fakeBotUser = {
+        _id: entry.userId,
+        name: entry.botProfile.name,
+        avatar: entry.botProfile.avatar,
+        wallet: { balance: fee }
+      };
+      freshUsers.push({ entry, user: fakeBotUser });
+      continue;
+    }
     const user = await User.findById(entry.userId);
     if (!user || user.wallet.balance < fee) {
       io.to(entry.socketId).emit('insufficient_balance', {
@@ -158,13 +168,17 @@ const tryStartMatch = async (io, mode, fee) => {
     events: [{ type: 'game_started', at: new Date() }],
   });
 
-  for (const { user } of freshUsers) {
+  for (const { entry, user } of freshUsers) {
     try {
-      await deductEntryFee(user._id, fee, game._id);
+      if (!entry.isBot) {
+        await deductEntryFee(user._id, fee, game._id);
+      }
     } catch (err) {
       await Game.findByIdAndUpdate(game._id, { status: 'cancelled' });
-      freshUsers.forEach(({ entry }) => {
-        io.to(entry.socketId).emit('error_event', { message: 'Failed to deduct entry fee' });
+      freshUsers.forEach(({ entry: e }) => {
+        if (!e.isBot) {
+          io.to(e.socketId).emit('error_event', { message: 'Failed to deduct entry fee' });
+        }
       });
       return;
     }
