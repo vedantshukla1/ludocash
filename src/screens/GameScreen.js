@@ -6,7 +6,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { getSocket, emit, on, off } from '../services/socket';
-import { playSound } from '../utils/sounds';
+import { playSound, toggleMusic, toggleSfx, isMusicEnabled, isSfxEnabled } from '../utils/sounds';
 import {
   COLORS, GRADIENTS, SPACING, RADIUS, PLAYER_COLORS, BOARD, SCREEN,
 } from '../utils/theme';
@@ -56,6 +56,11 @@ const GameScreen = ({ route, navigation }) => {
   const [timeoutCounts, setTimeoutCounts] = useState({ red: 0, blue: 0, green: 0, yellow: 0 });
   const [disqualifiedColors, setDisqualifiedColors] = useState([]);
   const [matchCountdown, setMatchCountdown] = useState(gameData.isWaitingToStart ? (gameData.countdownVal || 20) : 0);
+  const [musicOn, setMusicOn] = useState(isMusicEnabled());
+  const [sfxOn, setSfxOn] = useState(isSfxEnabled());
+
+  const handleToggleMusic = () => setMusicOn(toggleMusic());
+  const handleToggleSfx = () => setSfxOn(toggleSfx());
 
   const timerRef = useRef(null);
   const emojiTimeouts = useRef([]);
@@ -347,6 +352,8 @@ const GameScreen = ({ route, navigation }) => {
 
     socket.on('dice_roll_start', ({ color }) => {
       if (!mountedRef.current) return;
+      playSound('dice');
+      Vibration.vibrate(50);
       setRollingDice(true);
     });
 
@@ -500,8 +507,16 @@ const GameScreen = ({ route, navigation }) => {
           </Text>
         </View>
 
-        <View style={[styles.timerChip, { borderColor: timerColor }]}>
-          <Text style={[styles.timerText, { color: timerColor }]}>{timeLeft}s</Text>
+        <View style={styles.topRightControls}>
+          <View style={[styles.timerChip, { borderColor: timerColor }]}>
+            <Text style={[styles.timerText, { color: timerColor }]}>{timeLeft}s</Text>
+          </View>
+          <TouchableOpacity onPress={handleToggleMusic} style={styles.soundToggleBtn}>
+            <Text style={styles.soundToggleText}>{musicOn ? '🎵' : '🔇'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleToggleSfx} style={styles.soundToggleBtn}>
+            <Text style={styles.soundToggleText}>{sfxOn ? '🔊' : '🔈'}</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -653,6 +668,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   timerText: { fontWeight: '900', fontSize: 11 },
+  topRightControls: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  soundToggleBtn: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  soundToggleText: { fontSize: 14 },
   killBanner: {
     backgroundColor: 'rgba(255,68,68,0.85)',
     padding: SPACING.sm,
