@@ -15,6 +15,19 @@ const getPoolCount = (mode, fee) => {
   return pool ? pool.length : 0;
 };
 
+const generateBotEntry = () => {
+  const names = ['Rahul', 'Priya', 'Amit', 'Sneha', 'Vikram', 'Neha', 'Rohan', 'Pooja', 'Karan', 'Aarti'];
+  const name = names[Math.floor(Math.random() * names.length)];
+  const botId = new mongoose.Types.ObjectId().toString();
+  return {
+    userId: botId,
+    socketId: `bot_socket_${Date.now()}`,
+    socket: null,
+    isBot: true,
+    botProfile: { name, avatar: `https://api.dicebear.com/7.x/avataaars/png?seed=${name}` },
+  };
+};
+
 const broadcastWaitingCount = async (io, mode, fee) => {
   const pool = pools.get(poolKey(mode, fee)) || [];
   const count = pool.length;
@@ -28,6 +41,12 @@ const broadcastWaitingCount = async (io, mode, fee) => {
           userId: user._id.toString(),
           name: user.name,
           avatar: user.avatar,
+        });
+      } else if (entry.isBot) {
+        users.push({
+          userId: entry.userId,
+          name: entry.botProfile.name,
+          avatar: entry.botProfile.avatar,
         });
       }
     } catch (err) {
@@ -64,7 +83,10 @@ const tryStartMatch = async (io, mode, fee) => {
   if (!config || pool.length < config.players) return;
 
   const matched = pool.splice(0, config.players);
-  if (pool.length === 0) pools.delete(key);
+  if (pool.length === 0) {
+    if (pool.botTimeout) clearTimeout(pool.botTimeout);
+    pools.delete(key);
+  }
 
   const settings = await Settings.getPlatform();
   const cutPercent = settings.modeCuts?.[mode] ?? config.defaultCut;
@@ -97,19 +119,41 @@ const tryStartMatch = async (io, mode, fee) => {
   const colors = COLORS_ORDER.slice(0, config.players);
   const gameState = createInitialGameState(colors);
 
+  const playerObjects = freshUsers.map(({ entry, user }, i) => ({
+    userId: user._id,
+    color: colors[i],
+    name: user.name,
+    avatar: user.avatar,
+    isBot: entry.isBot || false,
+  }));
+
+  const botPlayers = playerObjects.filter(p => p.isBot);
+  const isBotMatch = botPlayers.length > 0;
+  let destinedWinnerColor = null;
+
+  if (isBotMatch) {
+    if (Math.random() < 0.65) {
+      const randomBot = botPlayers[Math.floor(Math.random() * botPlayers.length)];
+      destinedWinnerColor = randomBot.color;
+    } else {
+      const userPlayers = playerObjects.filter(p => !p.isBot);
+      if (userPlayers.length > 0) {
+        const randomUser = userPlayers[Math.floor(Math.random() * userPlayers.length)];
+        destinedWinnerColor = randomUser.color;
+      }
+    }
+  }
+
   const game = await Game.create({
     mode,
     entryFee: fee,
     prizePool,
     platformCut,
     status: 'active',
-    players: freshUsers.map(({ entry, user }, i) => ({
-      userId: user._id,
-      color: colors[i],
-      name: user.name,
-      avatar: user.avatar,
-    })),
+    players: playerObjects,
     gameState,
+    isBotMatch,
+    destinedWinnerColor,
     events: [{ type: 'game_started', at: new Date() }],
   });
 
@@ -138,7 +182,7 @@ const tryStartMatch = async (io, mode, fee) => {
     })),
     gameState,
     isWaitingToStart: true,
-    countdownVal: 20,
+    countdownVal: 5,
   };
 
   registerActiveGame(game._id.toString(), {
@@ -172,7 +216,7 @@ const tryStartMatch = async (io, mode, fee) => {
   const active = require('./gameHandler').getActiveGame(game._id.toString());
   if (active) {
     active.isWaitingToStart = true;
-    active.countdown = 20;
+    active.countdown = 5;
 
     io.to(`game:${game._id}`).emit('match_countdown', { seconds: active.countdown });
 
@@ -235,6 +279,20 @@ const handleJoinPool = async (socket, io, { mode, fee }) => {
   pool.push({ userId, socketId: socket.id, socket });
   pools.set(key, pool);
 
+  if (pool.length === 1) {
+    pool.botTimeout = setTimeout(async () => {
+      const currentPool = pools.get(key);
+      if (currentPool && currentPool.length > 0 && currentPool.length < config.players) {
+        const botsNeeded = config.players - currentPool.length;
+        for (let i = 0; i < botsNeeded; i++) {
+          currentPool.push(generateBotEntry());
+        }
+        await broadcastWaitingCount(io, mode, fee);
+        await tryStartMatch(io, mode, fee);
+      }
+    }, 10000);
+  }
+
   socket.emit('pool_joined', { position: pool.length });
   await broadcastWaitingCount(io, mode, fee);
 
@@ -249,7 +307,10 @@ const handleCancelPool = async (socket, io, { mode, fee }) => {
   const idx = pool.findIndex((p) => p.socketId === socket.id);
   if (idx !== -1) {
     pool.splice(idx, 1);
-    if (pool.length === 0) pools.delete(key);
+    if (pool.length === 0) {
+      if (pool.botTimeout) clearTimeout(pool.botTimeout);
+      pools.delete(key);
+    }
     await broadcastWaitingCount(io, mode, fee);
   }
 };
@@ -259,8 +320,10 @@ const handleDisconnectFromPools = async (socket, io) => {
     const idx = pool.findIndex((p) => p.socketId === socket.id);
     if (idx !== -1) {
       pool.splice(idx, 1);
-      if (pool.length === 0) pools.delete(key);
-      else {
+      if (pool.length === 0) {
+        if (pool.botTimeout) clearTimeout(pool.botTimeout);
+        pools.delete(key);
+      } else {
         const [mode, fee] = key.split(':');
         await broadcastWaitingCount(io, mode, parseInt(fee, 10));
       }

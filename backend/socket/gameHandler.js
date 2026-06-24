@@ -174,7 +174,11 @@ const autoRollAndMove = async (gameId) => {
     const current = activeGames.get(gameId);
     if (!current || current.gameState.currentTurn !== color) return;
 
-    const dice = rollDice();
+    const isDestinedWinner = current.game.isBotMatch && current.game.destinedWinnerColor
+      ? (color === current.game.destinedWinnerColor)
+      : null;
+
+    const dice = rollDice(isDestinedWinner);
     current.gameState.diceValue = dice;
 
     const movable = getMovablePieces(current.gameState, color, dice);
@@ -263,19 +267,26 @@ const startTurnTimer = (gameId) => {
 
   if (active.turnTimer) clearTimeout(active.turnTimer);
 
+  const color = active.gameState.currentTurn;
+  const currentPlayer = active.game.players.find(p => p.color === color);
+  const isBotTurn = currentPlayer?.isBot || false;
+  
+  const timeoutMs = isBotTurn ? 1500 : TURN_DURATION_MS;
+
   active.turnTimer = setTimeout(async () => {
     const current = activeGames.get(gameId);
     if (!current) return;
 
-    current.timeouts = current.timeouts || {};
-    const color = current.gameState.currentTurn;
-    current.timeouts[color] = (current.timeouts[color] || 0) + 1;
+    if (!isBotTurn) {
+      current.timeouts = current.timeouts || {};
+      current.timeouts[color] = (current.timeouts[color] || 0) + 1;
 
-    emitToGame(gameId, 'turn_timeout', { color, timeoutCount: current.timeouts[color] });
+      emitToGame(gameId, 'turn_timeout', { color, timeoutCount: current.timeouts[color] });
 
-    if (current.timeouts[color] >= 3) {
-      await handleDisqualification(gameId, color);
-      return;
+      if (current.timeouts[color] >= 3) {
+        await handleDisqualification(gameId, color);
+        return;
+      }
     }
 
     if (!current.gameState.diceRolled) {
@@ -292,7 +303,7 @@ const startTurnTimer = (gameId) => {
         advanceTurn(gameId, current.gameState.diceValue === 6, 'timeout');
       }
     }
-  }, TURN_DURATION_MS);
+  }, timeoutMs);
 };
 
 const handleRollDice = async (socket, { gameId }) => {
@@ -323,7 +334,11 @@ const handleRollDice = async (socket, { gameId }) => {
     const current = activeGames.get(gameId);
     if (!current || current.gameState.currentTurn !== color) return;
 
-    const dice = rollDice();
+    const isDestinedWinner = current.game.isBotMatch && current.game.destinedWinnerColor
+      ? (color === current.game.destinedWinnerColor)
+      : null;
+
+    const dice = rollDice(isDestinedWinner);
     current.gameState.diceValue = dice;
 
     if (dice === 6) {

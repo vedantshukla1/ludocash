@@ -124,7 +124,15 @@ const nextTurnColor = (gameState, currentColor) => {
   return gameState.turnOrder[(idx + 1) % gameState.turnOrder.length];
 };
 
-const rollDice = () => {
+const rollDice = (isDestinedWinner = null) => {
+  if (isDestinedWinner === true) {
+    if (Math.random() < 0.35) return 6;
+    return Math.floor(Math.random() * 5) + 1;
+  } else if (isDestinedWinner === false) {
+    if (Math.random() < 0.05) return 6;
+    return Math.floor(Math.random() * 5) + 1;
+  }
+  
   const bytes = require('crypto').randomBytes(1);
   return (bytes[0] % 6) + 1;
 };

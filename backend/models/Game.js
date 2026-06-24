@@ -7,6 +7,7 @@ const playerSchema = new mongoose.Schema(
     name: { type: String, default: '' },
     avatar: { type: String, default: '' },
     disconnected: { type: Boolean, default: false },
+    isBot: { type: Boolean, default: false },
   },
   { _id: false },
 );
@@ -25,6 +26,8 @@ const gameSchema = new mongoose.Schema(
     players: [playerSchema],
     winner: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     gameState: { type: mongoose.Schema.Types.Mixed, default: {} },
+    isBotMatch: { type: Boolean, default: false },
+    destinedWinnerColor: { type: String, default: null },
     events: [{ type: mongoose.Schema.Types.Mixed }],
     completedAt: { type: Date },
   },

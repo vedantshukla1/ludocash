@@ -93,19 +93,12 @@ const SelectFeeScreen = ({ route, navigation }) => {
         setSearching(true);
       });
 
-      socket.on('waiting_count', ({ count, users }) => {
-        setWaitingCount(count);
-        if (users) {
-          const opponents = users.filter((u) => u.userId !== user?._id?.toString());
-          setWaitingUsers(opponents);
-        }
-      });
+      // Hide active player counts entirely
 
       socket.on('game_found', (gameData) => {
         setSearching(false);
-        socket.off('game_found');
-        socket.off('waiting_count');
         socket.off('pool_joined');
+        socket.off('game_found');
         navigation.replace('Game', { gameData });
       });
 
@@ -130,9 +123,8 @@ const SelectFeeScreen = ({ route, navigation }) => {
     emit('cancel_pool', { mode: mode.id, fee: selectedFee });
     const socket = getSocket();
     if (socket) {
-      socket.off('game_found');
-      socket.off('waiting_count');
       socket.off('pool_joined');
+      socket.off('game_found');
     }
     setSearching(false);
     setWaitingCount(0);
@@ -229,20 +221,6 @@ const SelectFeeScreen = ({ route, navigation }) => {
               ))}
             </View>
             <Text style={styles.searchingText}>Finding opponent...</Text>
-            <Text style={styles.searchingCount}>
-              {waitingCount} player{waitingCount !== 1 ? 's' : ''} in queue
-            </Text>
-            {waitingUsers.length > 0 && (
-              <View style={styles.opponentList}>
-                <Text style={styles.opponentListTitle}>Opponents in Queue:</Text>
-                {waitingUsers.map((opp, idx) => (
-                  <View key={idx} style={styles.opponentCard}>
-                    <Text style={styles.opponentCardEmoji}>👤</Text>
-                    <Text style={styles.opponentCardName}>{opp.name}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
           </View>
         )}
 
