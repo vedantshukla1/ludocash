@@ -43,7 +43,9 @@ const WithdrawalsPage = () => {
     if (!window.confirm(`Approve ${selected.length} withdrawals?`)) return;
     try {
       const { data } = await adminService.bulkApproveWithdrawals(selected);
-      alert(`Approved: ${data.results.approved.length}, Failed: ${data.results.failed.length}`);
+      const approvedCount = data.results.filter(r => r.status === 'completed').length;
+      const failedCount = data.results.filter(r => r.status === 'failed').length;
+      alert(`Approved: ${approvedCount}, Failed: ${failedCount}`);
       setSelected([]);
       load();
     } catch (err) { alert('Bulk approval failed'); }

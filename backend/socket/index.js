@@ -14,6 +14,7 @@ const {
   handleReconnectGame,
   handleGameDisconnect,
   getActiveGameByUserId,
+  handleLeaveGame,
 } = require('./gameHandler');
 
 const initSocket = (io) => {
@@ -79,6 +80,7 @@ const initSocket = (io) => {
     socket.on('move_piece', (data) => handleMovePiece(socket, data));
     socket.on('send_emoji', (data) => handleSendEmoji(socket, data));
     socket.on('reconnect_game', (data) => handleReconnectGame(socket, data));
+    socket.on('leave_game', (data) => handleLeaveGame(socket, data));
 
     socket.on('disconnect', () => {
       handleDisconnectFromPools(socket, io);

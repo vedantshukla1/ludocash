@@ -129,7 +129,7 @@ const tryStartMatch = async (io, mode, fee) => {
 
   let colors;
   if (config.players === 2) {
-    colors = ['red', 'green'];
+    colors = ['blue', 'green'];
   } else if (config.players === 3) {
     colors = ['red', 'blue', 'green'];
   } else {
@@ -282,6 +282,14 @@ const handleJoinPool = async (socket, io, { mode, fee }) => {
 
   const user = await User.findById(userId);
   if (!user) return socket.emit('error_event', { message: 'User not found' });
+
+  // If the user is somehow still in an active game (e.g. they left without emitting leave_game),
+  // forcefully disqualify them and remove their socket from the old room before they join a new pool.
+  const { getActiveGameByUserId, handleLeaveGame } = require('./gameHandler');
+  const activeGame = getActiveGameByUserId(userId);
+  if (activeGame) {
+    await handleLeaveGame(socket, { gameId: activeGame.game._id.toString() });
+  }
 
   if (user.wallet.balance < fee) {
     return socket.emit('insufficient_balance', {

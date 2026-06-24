@@ -45,7 +45,11 @@ const getActiveGame = (gameId) => activeGames.get(gameId);
 
 const getActiveGameByUserId = (userId) => {
   for (const [gameId, active] of activeGames.entries()) {
-    if (active.game.players.some((p) => p.userId.toString() === userId.toString())) {
+    const player = active.game.players.find((p) => p.userId.toString() === userId.toString());
+    if (player) {
+      if (active.disqualified && active.disqualified.has(player.color)) {
+        continue;
+      }
       return active;
     }
   }
@@ -417,7 +421,8 @@ const handleRollDice = async (socket, { gameId }) => {
   }, 800);
 };
 
-const handleMovePiece = async (socket, { gameId, pieceId }) => {
+const handleMovePiece = async (socket, { gameId, pieceId: rawPieceId }) => {
+  const pieceId = Number(rawPieceId);
   const active = activeGames.get(gameId);
   if (!active) return socket.emit('error_event', { message: 'Game not found' });
 
@@ -498,6 +503,17 @@ const handleGameDisconnect = (socket, io) => {
   }
 };
 
+const handleLeaveGame = async (socket, { gameId }) => {
+  const active = activeGames.get(gameId);
+  if (!active) return;
+
+  const player = active.game.players.find((p) => p.userId.toString() === socket.userId.toString());
+  if (!player) return;
+
+  socket.leave(`game:${gameId}`);
+  await handleDisqualification(gameId, player.color);
+};
+
 module.exports = {
   getActiveGame,
   getActiveGameByUserId,
@@ -509,4 +525,5 @@ module.exports = {
   handleSendEmoji,
   handleReconnectGame,
   handleGameDisconnect,
+  handleLeaveGame,
 };

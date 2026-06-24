@@ -191,11 +191,11 @@ const createWithdrawalHold = async (userId, amount, upiId) => {
 
   try {
     const user = await User.findById(userId).session(session);
-    if (!user || user.wallet.withdrawable < amount) {
-      throw new Error('Insufficient withdrawable balance');
+    if (!user || user.wallet.balance < amount) {
+      throw new Error('Insufficient balance to withdraw');
     }
 
-    user.wallet.withdrawable -= amount;
+    user.wallet.withdrawable = Math.max(0, user.wallet.withdrawable - amount);
     user.wallet.balance -= amount;
     user.stats.totalWithdrawn += amount;
     await user.save({ session });

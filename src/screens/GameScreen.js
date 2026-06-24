@@ -82,7 +82,10 @@ const GameScreen = ({ route, navigation }) => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
       Alert.alert('Leave Game?', 'Leaving will forfeit the game.', [
         { text: 'Stay', style: 'cancel' },
-        { text: 'Leave', style: 'destructive', onPress: () => navigation.replace('Main') },
+        { text: 'Leave', style: 'destructive', onPress: () => {
+          emit('leave_game', { gameId: gameData.gameId });
+          navigation.replace('Main');
+        }},
       ]);
       return true;
     });
