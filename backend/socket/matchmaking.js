@@ -221,7 +221,9 @@ const tryStartMatch = async (io, mode, fee) => {
         }
       } else {
         active.sockets[user._id.toString()] = entry.socketId;
-        entry.socket.join(`game:${game._id}`);
+        if (entry.socket) {
+          entry.socket.join(`game:${game._id}`);
+        }
       }
     }
 

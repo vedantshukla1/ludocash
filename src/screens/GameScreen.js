@@ -89,6 +89,24 @@ const GameScreen = ({ route, navigation }) => {
     };
   }, []);
 
+  // ─── Local Match Countdown Fallback ─────────────────────────────────────────
+  useEffect(() => {
+    let interval;
+    if (matchCountdown > 0) {
+      interval = setInterval(() => {
+        setMatchCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            startTurnTimer();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [matchCountdown > 0, startTurnTimer]);
+
   // ─── Turn tracking ────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!myColor || !gameState) return;
