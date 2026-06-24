@@ -15,6 +15,30 @@ const {
 } = require('../services/gameEngine');
 const { creditWinnings, recordLoss } = require('../services/walletService');
 
+const chooseBestAutoMove = (gameState, color, dice, movable) => {
+  if (movable.length === 0) return null;
+  const colorEntry = gameState.pieces.find((e) => e.color === color);
+  if (!colorEntry) return movable[0];
+
+  // 1. Try to find a killing move
+  for (const pid of movable) {
+    const piece = colorEntry.pieces.find((p) => p.id === pid);
+    const target = calculateNewPosition(color, piece, dice);
+    if (target && target.newState === 'on-board') {
+      const killTarget = findKillTarget(gameState, color, target.absolutePos);
+      if (killTarget) return pid;
+    }
+  }
+
+  // 2. Try to spawn out of base
+  if (dice === 6) {
+    const basePiece = colorEntry.pieces.find((p) => p.state === 'base' && movable.includes(p.id));
+    if (basePiece) return basePiece.id;
+  }
+
+  return movable[0];
+};
+
 const activeGames = new Map();
 
 const getActiveGame = (gameId) => activeGames.get(gameId);
@@ -61,9 +85,9 @@ const advanceTurn = (gameId, extraTurn = false, reason = '') => {
   const { gameState } = active;
   gameState.diceRolled = false;
   gameState.diceValue = null;
-  gameState.consecutiveSixes = 0;
 
   if (!extraTurn) {
+    gameState.consecutiveSixes = 0;
     gameState.currentTurn = nextTurnColor(gameState, gameState.currentTurn);
   }
 
@@ -210,7 +234,7 @@ const autoRollAndMove = async (gameId) => {
       return;
     }
 
-    const pieceId = movable[0];
+    const pieceId = chooseBestAutoMove(current.gameState, color, dice, movable);
     await applyMove(gameId, color, pieceId, true);
   }, 800);
 };
@@ -312,7 +336,13 @@ const startTurnTimer = (gameId) => {
         current.gameState.diceValue,
       );
       if (movable.length > 0) {
-        await applyMove(gameId, current.gameState.currentTurn, movable[0], true);
+        const bestPieceId = chooseBestAutoMove(
+          current.gameState,
+          current.gameState.currentTurn,
+          current.gameState.diceValue,
+          movable
+        );
+        await applyMove(gameId, current.gameState.currentTurn, bestPieceId, true);
       } else {
         advanceTurn(gameId, current.gameState.diceValue === 6, 'timeout');
       }

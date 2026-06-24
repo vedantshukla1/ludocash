@@ -127,7 +127,14 @@ const tryStartMatch = async (io, mode, fee) => {
     return;
   }
 
-  const colors = COLORS_ORDER.slice(0, config.players);
+  let colors;
+  if (config.players === 2) {
+    colors = ['red', 'green'];
+  } else if (config.players === 3) {
+    colors = ['red', 'blue', 'green'];
+  } else {
+    colors = COLORS_ORDER.slice(0, config.players);
+  }
   const gameState = createInitialGameState(colors);
 
   const playerObjects = freshUsers.map(({ entry, user }, i) => ({

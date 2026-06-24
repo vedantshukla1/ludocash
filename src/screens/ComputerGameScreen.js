@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useAuth } from '../context/AuthContext';
-import { playSound } from '../utils/sounds';
+import { playSound, toggleMusic, toggleSfx, isMusicEnabled, isSfxEnabled } from '../utils/sounds';
 import {
   COLORS, GRADIENTS, SPACING, RADIUS, PLAYER_COLORS, SHADOWS,
 } from '../utils/theme';
@@ -75,6 +75,11 @@ const ComputerGameScreen = ({ route, navigation }) => {
   const [winner, setWinner] = useState(null);
   const [timeLeft, setTimeLeft] = useState(20);
   const [timeoutCounts, setTimeoutCounts] = useState({ red: 0, blue: 0, green: 0, yellow: 0 });
+  const [musicOn, setMusicOn] = useState(isMusicEnabled());
+  const [sfxOn, setSfxOn] = useState(isSfxEnabled());
+
+  const handleToggleMusic = () => setMusicOn(toggleMusic());
+  const handleToggleSfx = () => setSfxOn(toggleSfx());
 
   const turnTimerRef = useRef(null);
   const playTimerRef = useRef(null);
@@ -567,12 +572,17 @@ const ComputerGameScreen = ({ route, navigation }) => {
         <View style={styles.turnInfo}>
           <View style={[styles.turnDot, { backgroundColor: PLAYER_COLORS[gameState.currentTurn]?.primary || COLORS.white }]} />
           <Text style={styles.turnText}>
-            {gameState.currentTurn === 'red' ? 'Your Turn' : `${players.find(p => p.color === gameState.currentTurn)?.name || 'Computer'}'s Turn`}
+            {gameState.currentTurn === 'red' ? 'Your Turn' : `${players.find(p => p.color === gameState.currentTurn)?.name || 'Computer'}'s Turn`} ({timeLeft}s)
           </Text>
         </View>
 
-        <View style={[styles.timerChip, { borderColor: timerColor }]}>
-          <Text style={[styles.timerText, { color: timerColor }]}>{timeLeft}s</Text>
+        <View style={styles.topRightControls}>
+          <TouchableOpacity onPress={handleToggleMusic} style={styles.soundToggleBtn}>
+            <Text style={styles.soundToggleText}>{musicOn ? '🎵' : '🔇'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleToggleSfx} style={styles.soundToggleBtn}>
+            <Text style={styles.soundToggleText}>{sfxOn ? '🔊' : '🔈'}</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -631,6 +641,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   timerText: { fontWeight: '900', fontSize: 11 },
+  topRightControls: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  soundToggleBtn: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  soundToggleText: { fontSize: 14 },
   timeoutDotsRow: {
     flexDirection: 'row',
     gap: 5,

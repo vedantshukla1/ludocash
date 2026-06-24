@@ -40,6 +40,7 @@ const GameScreen = ({ route, navigation }) => {
   const { user } = useAuth();
 
   const [gameState, setGameState] = useState(gameData.gameState);
+  const gameStateRef = useRef(gameData.gameState);
   const [players, setPlayers] = useState(gameData.players);
   const [myColor, setMyColor] = useState(null);
   const [diceValue, setDiceValue] = useState(null);
@@ -124,6 +125,11 @@ const GameScreen = ({ route, navigation }) => {
     }
   }, [gameState, myColor]);
 
+  // Keep ref in sync
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
+
   // ─── Timer ───────────────────────────────────────────────────────────────────
   const startTurnTimer = useCallback(() => {
     clearTimer();
@@ -168,21 +174,24 @@ const GameScreen = ({ route, navigation }) => {
     socket.on('piece_moved', ({ color, pieceId, newState, newPosition, toPos, autoMove }) => {
       if (!mountedRef.current) return;
       
-      Vibration.vibrate(30); // Light haptic feedback for every piece movement
+      Vibration.vibrate(30);
 
-      setGameState((prev) => {
-        if (!prev) return prev;
-        const pieceEntry = prev.pieces.find((entry) => entry.color === color);
-        const startPiece = pieceEntry?.pieces.find((p) => p.id === pieceId);
+      const prev = gameStateRef.current;
+      if (!prev) return;
 
-        if (!startPiece) return prev;
+      const pieceEntry = prev.pieces.find((entry) => entry.color === color);
+      const startPiece = pieceEntry?.pieces.find((p) => p.id === pieceId);
 
-        const roll = deduceRollValue(startPiece, newState, newPosition);
-        const steps = getPathSteps(color, startPiece, roll);
+      if (!startPiece) return;
 
-        if (steps.length === 0) {
-          // Fallback if no steps: set target immediately
-          const pieces = prev.pieces.map((entry) => {
+      const roll = deduceRollValue(startPiece, newState, newPosition);
+      const steps = getPathSteps(color, startPiece, roll);
+
+      if (steps.length === 0) {
+        // Fallback if no steps: set target immediately
+        setGameState((state) => {
+          if (!state) return state;
+          const pieces = state.pieces.map((entry) => {
             if (entry.color !== color) return entry;
             return {
               ...entry,
@@ -193,65 +202,64 @@ const GameScreen = ({ route, navigation }) => {
               )
             };
           });
-          return { ...prev, pieces };
-        }
+          return { ...state, pieces };
+        });
+        return;
+      }
 
-        // Animate step-by-step
-        let stepIndex = 0;
-        const runStep = () => {
-          if (!mountedRef.current) return;
-          if (stepIndex >= steps.length) {
-            // Animation finished. Set final state exactly to make sure it matches server
-            setGameState((state) => {
-              if (!state) return state;
-              const pieces = state.pieces.map((entry) => {
-                if (entry.color !== color) return entry;
-                return {
-                  ...entry,
-                  pieces: entry.pieces.map((p) =>
-                    p.id === pieceId
-                      ? { ...p, state: newState, position: newPosition, absolutePos: toPos }
-                      : p
-                  )
-                };
-              });
-              return { ...state, pieces };
-            });
-            return;
-          }
-
-          const targetStep = steps[stepIndex];
-          playSound('move');
-
+      // Animate step-by-step
+      let stepIndex = 0;
+      const runStep = () => {
+        if (!mountedRef.current) return;
+        if (stepIndex >= steps.length) {
+          // Animation finished. Set final state exactly to make sure it matches server
           setGameState((state) => {
             if (!state) return state;
             const pieces = state.pieces.map((entry) => {
               if (entry.color !== color) return entry;
               return {
                 ...entry,
-                pieces: entry.pieces.map((p) => {
-                  if (p.id !== pieceId) return p;
-                  return {
-                    ...p,
-                    state: targetStep.state,
-                    position: targetStep.position,
-                    absolutePos: targetStep.absolutePos,
-                  };
-                })
+                pieces: entry.pieces.map((p) =>
+                  p.id === pieceId
+                    ? { ...p, state: newState, position: newPosition, absolutePos: toPos }
+                    : p
+                )
               };
             });
             return { ...state, pieces };
           });
+          return;
+        }
 
-          stepIndex++;
-          setTimeout(runStep, 150);
-        };
+        const targetStep = steps[stepIndex];
+        playSound('move');
 
-        // Start path animation
-        setTimeout(runStep, 0);
+        setGameState((state) => {
+          if (!state) return state;
+          const pieces = state.pieces.map((entry) => {
+            if (entry.color !== color) return entry;
+            return {
+              ...entry,
+              pieces: entry.pieces.map((p) => {
+                if (p.id !== pieceId) return p;
+                return {
+                  ...p,
+                  state: targetStep.state,
+                  position: targetStep.position,
+                  absolutePos: targetStep.absolutePos,
+                };
+              })
+            };
+          });
+          return { ...state, pieces };
+        });
 
-        return prev; // Return prev immediately so the first state update handles the loop asynchronously
-      });
+        stepIndex++;
+        setTimeout(runStep, 150);
+      };
+
+      // Start path animation
+      runStep();
     });
 
     socket.on('piece_killed', ({ killerColor, killedColor, killedPieceId }) => {
@@ -423,17 +431,7 @@ const GameScreen = ({ route, navigation }) => {
 
   const renderPlayerProfile = (player, color, diceComponent = null) => {
     if (!player) {
-      return (
-        <View style={[styles.playerProfile, styles.profileInactive]}>
-          <View style={styles.profileRow}>
-            <View style={[styles.avatarMini, { backgroundColor: 'rgba(255,255,255,0.08)' }]}>
-              <Text style={styles.avatarTextMini}>+</Text>
-            </View>
-            <View style={styles.diceBox} />
-          </View>
-          <Text style={[styles.playerNameText, { color: COLORS.textMuted }]}>Waiting...</Text>
-        </View>
-      );
+      return <View style={styles.emptyProfileBox} />;
     }
 
     const isDisqualified = disqualifiedColors.includes(color);
@@ -737,6 +735,11 @@ const styles = StyleSheet.create({
   },
   profileInactive: {
     opacity: 0.4,
+  },
+  emptyProfileBox: {
+    minWidth: 100,
+    minHeight: 82,
+    backgroundColor: 'transparent',
   },
   profileRow: {
     flexDirection: 'row',

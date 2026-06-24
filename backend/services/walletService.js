@@ -231,6 +231,8 @@ const restoreWithdrawable = async (userId, amount) => {
   const user = await User.findById(userId);
   if (!user) return;
   user.wallet.withdrawable += amount;
+  user.wallet.balance += amount;
+  if (user.stats) user.stats.totalWithdrawn = Math.max(0, user.stats.totalWithdrawn - amount);
   await user.save();
   return user;
 };

@@ -118,17 +118,7 @@ export const calculateNewPosition = (color, piece, dice) => {
 
   if (piece.state === 'on-board') {
     const newRel = piece.position + dice;
-    if (newRel === 52) {
-      return {
-        newPos: 0,
-        newState: 'home-column',
-        absolutePos: -1,
-        homeColumn: true,
-        reachedHome: false,
-      };
-    } else if (newRel > 52) {
-      return null;
-    } else if (newRel > 51) {
+    if (newRel > 51) {
       const homeColPos = newRel - 52;
       if (homeColPos > 5) return null;
       return {
