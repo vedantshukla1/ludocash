@@ -490,7 +490,7 @@ const GameScreen = ({ route, navigation }) => {
             value={isActive ? diceValue : null}
             rolling={isActive && rollingDice}
             onPress={handleRollDice}
-            disabled={myColor !== color || diceRolled}
+            disabled={myColor === color ? diceRolled : false}
             size={36}
           />
         </View>
