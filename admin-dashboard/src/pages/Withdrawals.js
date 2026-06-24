@@ -90,7 +90,7 @@ const WithdrawalsPage = () => {
           <thead>
             <tr style={styles.thead}>
               {statusFilter === 'pending' && <th style={styles.th}><input type="checkbox" onChange={selectAll} /></th>}
-              {['User', 'Email', 'Amount', 'UPI ID', 'Status', 'Requested', 'Actions'].map((h) => (
+              {['User', 'Email', 'Amount', 'UPI ID', 'Status', 'Reason', 'Requested', 'Actions'].map((h) => (
                 <th key={h} style={styles.th}>{h}</th>
               ))}
             </tr>
@@ -118,7 +118,10 @@ const WithdrawalsPage = () => {
                     {w.status}
                   </span>
                 </td>
-                <td style={styles.td}>{new Date(w.requestedAt).toLocaleDateString('en-IN')}</td>
+                <td style={{ ...styles.td, fontSize: 12, color: '#aaa', maxWidth: 150 }}>
+                  {w.rejectionReason || (w.status === 'failed' ? 'Gateway Error' : '-')}
+                </td>
+                <td style={styles.td}>{new Date(w.createdAt).toLocaleDateString('en-IN')}</td>
                 <td style={styles.td}>
                   {w.status === 'pending' && (
                     <div style={styles.actionBtns}>

@@ -17,6 +17,8 @@ import WalletScreen from '../screens/WalletScreen';
 import LeaderboardScreen from '../screens/LeaderboardScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import ComputerGameScreen from '../screens/ComputerGameScreen';
+import TermsScreen from '../screens/TermsScreen';
+import PrivacyScreen from '../screens/PrivacyScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -109,8 +111,13 @@ const AppNavigator = () => {
         <Stack.Screen
           name="ComputerGame"
           component={ComputerGameScreen}
-          options={{ animation: 'slide_from_right', gestureEnabled: false }}
+          options={{
+            animation: 'slide_from_bottom',
+            gestureEnabled: false,
+          }}
         />
+        <Stack.Screen name="Terms" component={TermsScreen} options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="Privacy" component={PrivacyScreen} options={{ animation: 'slide_from_right' }} />
         <Stack.Screen
           name="Result"
           component={ResultScreen}

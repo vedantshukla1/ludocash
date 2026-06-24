@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, StatusBar, Alert, Switch,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { COLORS, GRADIENTS, SPACING, RADIUS, SHADOWS } from '../utils/theme';
@@ -12,8 +13,8 @@ const MENU_ITEMS = [
   { id: 'history', icon: '📋', label: 'Transaction History', screen: 'Wallet' },
   { id: 'wins', icon: '🏆', label: 'My Wins', screen: null },
   { id: 'support', icon: '💬', label: 'Support', screen: null },
-  { id: 'terms', icon: '📄', label: 'Terms & Conditions', screen: null },
-  { id: 'privacy', icon: '🔒', label: 'Privacy Policy', screen: null },
+  { id: 'terms', icon: '📄', label: 'Terms & Conditions', screen: 'Terms' },
+  { id: 'privacy', icon: '🔒', label: 'Privacy Policy', screen: 'Privacy' },
 ];
 
 const StatCard = ({ icon, label, value, color }) => (
@@ -25,7 +26,7 @@ const StatCard = ({ icon, label, value, color }) => (
 );
 
 const ProfileScreen = ({ navigation }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const [musicOn, setMusicOn] = useState(isMusicEnabled());
   const [sfxOn, setSfxOn] = useState(isSfxEnabled());
 
@@ -58,9 +59,15 @@ const ProfileScreen = ({ navigation }) => {
     Alert.alert(item.label, 'Coming soon!');
   };
 
+  useFocusEffect(
+    React.useCallback(() => {
+      refreshUser();
+    }, [refreshUser])
+  );
+
   const stats = user?.stats || {};
-  const winRate = stats.totalGames > 0
-    ? Math.round((stats.wins / stats.totalGames) * 100)
+  const winRate = stats.gamesPlayed > 0
+    ? Math.round((stats.wins / stats.gamesPlayed) * 100)
     : 0;
 
   return (
@@ -95,13 +102,13 @@ const ProfileScreen = ({ navigation }) => {
 
         {/* Stats grid */}
         <View style={styles.statsGrid}>
-          <StatCard icon="🎮" label="Games" value={stats.totalGames || 0} />
+          <StatCard icon="🎮" label="Games" value={stats.gamesPlayed || 0} />
           <StatCard icon="🏆" label="Wins" value={stats.wins || 0} color={COLORS.gold} />
           <StatCard icon="📊" label="Win Rate" value={`${winRate}%`} color={COLORS.green} />
           <StatCard
             icon="💵"
             label="Earned"
-            value={`₹${(stats.totalEarnings || 0).toFixed(0)}`}
+            value={`₹${(stats.totalWithdrawn || 0).toFixed(0)}`}
             color={COLORS.gold}
           />
         </View>

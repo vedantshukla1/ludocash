@@ -38,7 +38,6 @@ const creditDeposit = async (userId, amount, razorpayOrderId, razorpayPaymentId)
     if (!user) throw new Error('User not found');
 
     user.wallet.balance += amount;
-    user.wallet.withdrawable += amount;
 
     let bonusAmount = 0;
     if (amount > DEPOSIT_BONUS_THRESHOLD) {
@@ -197,6 +196,8 @@ const createWithdrawalHold = async (userId, amount, upiId) => {
     }
 
     user.wallet.withdrawable -= amount;
+    user.wallet.balance -= amount;
+    user.stats.totalWithdrawn += amount;
     await user.save({ session });
 
     const Withdrawal = require('../models/Withdrawal');

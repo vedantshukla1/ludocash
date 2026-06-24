@@ -17,6 +17,7 @@ const statsSchema = new mongoose.Schema(
     totalEarnings: { type: Number, default: 0 },
     netWinningsFY: { type: Number, default: 0 },
     financialYear: { type: String, default: '' },
+    totalWithdrawn: { type: Number, default: 0 },
   },
   { _id: false },
 );
