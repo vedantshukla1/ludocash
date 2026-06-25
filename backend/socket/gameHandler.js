@@ -220,7 +220,7 @@ const autoRollAndMove = async (gameId) => {
       ? (color === current.game.destinedWinnerColor)
       : null;
 
-    const dice = rollDice(isDestinedWinner);
+    const dice = rollDice(isDestinedWinner, current.gameState);
     current.gameState.diceValue = dice;
 
     const movable = getMovablePieces(current.gameState, color, dice);
@@ -234,13 +234,13 @@ const autoRollAndMove = async (gameId) => {
 
     if (movable.length === 0) {
       const extraTurn = dice === 6;
-      setTimeout(() => advanceTurn(gameId, extraTurn, 'no_move'), 800);
+      setTimeout(() => advanceTurn(gameId, extraTurn, 'no_move'), 400);
       return;
     }
 
     const pieceId = chooseBestAutoMove(current.gameState, color, dice, movable);
     await applyMove(gameId, color, pieceId, true);
-  }, 800);
+  }, 400);
 };
 
 const applyMove = async (gameId, color, pieceId, autoMove = false) => {
@@ -313,7 +313,7 @@ const startTurnTimer = (gameId) => {
   const currentPlayer = active.game.players.find(p => p.color === color);
   const isBotTurn = currentPlayer?.isBot || false;
   
-  const timeoutMs = isBotTurn ? 1500 : TURN_DURATION_MS;
+  const timeoutMs = isBotTurn ? 500 : TURN_DURATION_MS;
 
   active.turnTimer = setTimeout(async () => {
     const current = activeGames.get(gameId);
@@ -386,7 +386,7 @@ const handleRollDice = async (socket, { gameId }) => {
       ? (color === current.game.destinedWinnerColor)
       : null;
 
-    const dice = rollDice(isDestinedWinner);
+    const dice = rollDice(isDestinedWinner, current.gameState);
     current.gameState.diceValue = dice;
 
     if (dice === 6) {
@@ -414,11 +414,11 @@ const handleRollDice = async (socket, { gameId }) => {
     await saveGameState(gameId);
 
     if (movable.length === 0) {
-      setTimeout(() => advanceTurn(gameId, dice === 6, 'no_move'), 1000);
+      setTimeout(() => advanceTurn(gameId, dice === 6, 'no_move'), 400);
     } else {
       startTurnTimer(gameId);
     }
-  }, 800);
+  }, 400);
 };
 
 const handleMovePiece = async (socket, { gameId, pieceId: rawPieceId }) => {

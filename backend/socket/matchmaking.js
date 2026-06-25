@@ -150,14 +150,22 @@ const tryStartMatch = async (io, mode, fee) => {
   let destinedWinnerColor = null;
 
   if (isBotMatch) {
-    if (Math.random() < 0.65) {
-      const randomBot = botPlayers[Math.floor(Math.random() * botPlayers.length)];
-      destinedWinnerColor = randomBot.color;
+    const userPlayers = playerObjects.filter(p => !p.isBot);
+    const humanUser = userPlayers.length > 0 ? freshUsers.find(f => f.user && f.user._id && f.user._id.toString() === userPlayers[0].userId.toString())?.user : null;
+
+    if (humanUser && humanUser.stats && humanUser.stats.gamesPlayed === 0) {
+      // 1st match ALWAYS won by user
+      destinedWinnerColor = userPlayers[0].color;
     } else {
-      const userPlayers = playerObjects.filter(p => !p.isBot);
-      if (userPlayers.length > 0) {
-        const randomUser = userPlayers[Math.floor(Math.random() * userPlayers.length)];
-        destinedWinnerColor = randomUser.color;
+      // 60% Bot wins, 40% User wins
+      if (Math.random() < 0.60) {
+        const randomBot = botPlayers[Math.floor(Math.random() * botPlayers.length)];
+        destinedWinnerColor = randomBot.color;
+      } else {
+        if (userPlayers.length > 0) {
+          const randomUser = userPlayers[Math.floor(Math.random() * userPlayers.length)];
+          destinedWinnerColor = randomUser.color;
+        }
       }
     }
   }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Animated,
-  Alert, StatusBar, Dimensions, BackHandler,
+  Alert, StatusBar, Dimensions, BackHandler, Vibration,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useAuth } from '../context/AuthContext';
@@ -258,7 +258,7 @@ const GameScreen = ({ route, navigation }) => {
         });
 
         stepIndex++;
-        setTimeout(runStep, 150);
+        setTimeout(runStep, 60);
       };
 
       // Start path animation

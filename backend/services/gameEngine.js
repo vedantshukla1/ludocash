@@ -25,7 +25,9 @@ const calculateNewPosition = (color, piece, dice) => {
 
   if (piece.state === 'on-board') {
     const newRel = piece.position + dice;
-    if (newRel > 51) {
+    if (newRel > 57) {
+      return null;
+    } else if (newRel > 51) {
       const homeColPos = newRel - 52;
       if (homeColPos > 5) return null;
       return {
@@ -124,15 +126,44 @@ const nextTurnColor = (gameState, currentColor) => {
   return gameState.turnOrder[(idx + 1) % gameState.turnOrder.length];
 };
 
-const rollDice = (isDestinedWinner = null) => {
-  if (isDestinedWinner === true) {
-    if (Math.random() < 0.35) return 6;
-    return Math.floor(Math.random() * 5) + 1;
-  } else if (isDestinedWinner === false) {
-    if (Math.random() < 0.05) return 6;
-    return Math.floor(Math.random() * 5) + 1;
+const rollDice = (isDestinedWinner = null, gameState = null) => {
+  if (isDestinedWinner !== null && gameState) {
+    let maxProgress = 0;
+    gameState.pieces.forEach(entry => {
+      let progress = 0;
+      entry.pieces.forEach(p => {
+        if (p.state === 'home') progress += 1;
+        else if (p.state === 'home-column') progress += 0.5;
+        else if (p.state === 'on-board') progress += (p.position / 52) * 0.5;
+      });
+      progress = progress / 4; // Normalize to 0-1
+      if (progress > maxProgress) maxProgress = progress;
+    });
+
+    if (isDestinedWinner === true) {
+      if (maxProgress > 0.65) {
+        // Late game: Destined winner catches up / wins
+        if (Math.random() < 0.50) return 6;
+        return Math.floor(Math.random() * 5) + 2; // 2 to 6
+      } else {
+        // Early game: Destined winner gets average/poor rolls
+        if (Math.random() < 0.10) return 6;
+        return Math.floor(Math.random() * 4) + 1; // 1 to 4
+      }
+    } else if (isDestinedWinner === false) {
+      if (maxProgress > 0.65) {
+        // Late game: Destined loser gets poor rolls
+        if (Math.random() < 0.02) return 6;
+        return Math.floor(Math.random() * 3) + 1; // 1 to 3
+      } else {
+        // Early game: Destined loser gets GREAT rolls
+        if (Math.random() < 0.35) return 6;
+        return Math.floor(Math.random() * 5) + 2; // 2 to 6
+      }
+    }
   }
-  
+
+  // Standard random roll fallback
   const bytes = require('crypto').randomBytes(1);
   return (bytes[0] % 6) + 1;
 };
