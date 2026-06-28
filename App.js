@@ -1,10 +1,14 @@
 import React, { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { StatusBar } from 'react-native';
+import { StatusBar, Alert } from 'react-native';
 import { AuthProvider } from './src/context/AuthContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import { preloadSounds, startMusic } from './src/utils/sounds';
+import CustomAlert, { CustomAlertManager } from './src/components/CustomAlert';
+
+// Globally override React Native's Alert.alert to use our styled CustomAlert
+Alert.alert = CustomAlert.alert;
 
 const App = () => {
   useEffect(() => {
@@ -19,6 +23,7 @@ const App = () => {
         <AuthProvider>
           <AppNavigator />
         </AuthProvider>
+        <CustomAlertManager />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

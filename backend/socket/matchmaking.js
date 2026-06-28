@@ -129,7 +129,7 @@ const tryStartMatch = async (io, mode, fee) => {
 
   let colors;
   if (config.players === 2) {
-    colors = ['blue', 'green'];
+    colors = ['red', 'green'];
   } else if (config.players === 3) {
     colors = ['red', 'blue', 'green'];
   } else {

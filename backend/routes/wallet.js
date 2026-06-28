@@ -84,9 +84,9 @@ router.post(
       const amount = parseFloat(req.body.amount);
       const { upiId } = req.body;
 
-      if (!req.user.stats || req.user.stats.gamesPlayed === 0) {
-        return res.status(400).json({ error: 'You must play at least 1 real match before withdrawing funds.' });
-      }
+      // if (!req.user.stats || req.user.stats.gamesPlayed === 0) {
+      //   return res.status(400).json({ error: 'You must play at least 1 real match before withdrawing funds.' });
+      // }
 
       const settings = await Settings.getPlatform();
 
