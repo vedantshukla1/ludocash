@@ -77,23 +77,11 @@ const MainTabs = () => (
 );
 
 const AppNavigator = () => {
-  const { initialized, isLoggedIn } = useAuth();
-
-  if (!initialized) {
-    return (
-      <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="Splash" component={SplashScreen} />
-        </Stack.Navigator>
-      </NavigationContainer>
-    );
-  }
-
   return (
     <NavigationContainer>
       <Stack.Navigator
         screenOptions={{ headerShown: false, animation: 'fade' }}
-        initialRouteName={isLoggedIn ? 'Main' : 'Splash'}
+        initialRouteName="Splash"
       >
         <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />

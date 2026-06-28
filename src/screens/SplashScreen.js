@@ -17,6 +17,7 @@ const { width, height } = Dimensions.get('window');
 
 const SplashScreen = ({ navigation }) => {
   const { initialized, isLoggedIn } = useAuth();
+  const [animationDone, setAnimationDone] = React.useState(false);
 
   // Animations
   const logoScale = useRef(new Animated.Value(0)).current;
@@ -47,15 +48,20 @@ const SplashScreen = ({ navigation }) => {
       useNativeDriver: false,
     }).start();
 
-    // Navigate after 2.5s
+    // Set animation as done after 2.5s
     const timer = setTimeout(() => {
-      if (initialized) {
-        navigation.replace(isLoggedIn ? 'Main' : 'Login');
-      }
+      setAnimationDone(true);
     }, 2500);
 
     return () => clearTimeout(timer);
-  }, [initialized, isLoggedIn]);
+  }, []); // Only run once on mount!
+
+  useEffect(() => {
+    // Navigate ONLY when BOTH animation is done and auth is initialized
+    if (animationDone && initialized) {
+      navigation.replace(isLoggedIn ? 'Main' : 'Login');
+    }
+  }, [animationDone, initialized, isLoggedIn, navigation]);
 
   return (
     <LinearGradient colors={GRADIENTS.backgroundSplash} style={styles.container}>
