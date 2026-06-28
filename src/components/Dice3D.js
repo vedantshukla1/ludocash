@@ -1,46 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Animated, Easing, TouchableOpacity } from 'react-native';
-import { Audio } from 'expo-av';
+import { playSound } from '../utils/sounds';
 
 const Dice3D = ({ value = 1, rolling = false, onRollComplete, onPress, disabled, size = 60 }) => {
   const rotateX = useRef(new Animated.Value(0)).current;
   const rotateY = useRef(new Animated.Value(0)).current;
-  const soundRoll = useRef(new Audio.Sound());
-  const [soundsLoaded, setSoundsLoaded] = useState(false);
   const [displayValue, setDisplayValue] = useState(value);
-
-  useEffect(() => {
-    let isMounted = true;
-    const loadSounds = async () => {
-      try {
-        await soundRoll.current.loadAsync(
-          { uri: 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_c8c8a73467.mp3?filename=dice-142593.mp3' },
-          { shouldPlay: false }
-        );
-        if (isMounted) setSoundsLoaded(true);
-      } catch (e) {
-        console.log('Dice3D sound load error (ignoring if assets missing):', e);
-      }
-    };
-    loadSounds();
-
-    return () => {
-      isMounted = false;
-      soundRoll.current.unloadAsync();
-    };
-  }, []);
 
   useEffect(() => {
     if (rolling) {
       // Play sound
-      const playRollSound = async () => {
-        if (soundsLoaded) {
-          try {
-            await soundRoll.current.replayAsync();
-          } catch (e) {}
-        }
-      };
-      playRollSound();
+      playSound('dice');
 
       // Animate roll
       rotateX.setValue(0);
@@ -87,7 +57,7 @@ const Dice3D = ({ value = 1, rolling = false, onRollComplete, onPress, disabled,
     } else {
       setDisplayValue(value);
     }
-  }, [rolling, value, soundsLoaded, rotateX, rotateY]);
+  }, [rolling, value, rotateX, rotateY]);
 
   const spinX = rotateX.interpolate({
     inputRange: [0, 720],

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Animated, TouchableWithoutFeedback } from 'react-native';
-import { Audio } from 'expo-av';
+import { playSound } from '../utils/sounds';
 
 const COLORS = {
   red: { body: '#D32F2F', highlight: '#EF9A9A', base: '#B71C1C' },
@@ -13,42 +13,6 @@ const Piece3D = ({ color = 'red', selected = false, onPress, moving = false, siz
   const theme = COLORS[color];
   const translateY = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(1)).current;
-
-  // Sound refs
-  const soundPop = useRef(new Audio.Sound());
-  const soundThud = useRef(new Audio.Sound());
-  const [soundsLoaded, setSoundsLoaded] = useState(false);
-
-  useEffect(() => {
-    let isMounted = true;
-    const loadSounds = async () => {
-      try {
-        // Preload sounds for zero-latency playback
-        // In a real app, ensure these asset paths exist or use correct required modules.
-        // We use dummy remote URIs or assume they might be replaced.
-        // For standard require: require('../../assets/sounds/pop.mp3')
-        // Using safe mock assets if local assets are missing.
-        await soundPop.current.loadAsync(
-          { uri: 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_7d2f97a389.mp3?filename=pop-39222.mp3' },
-          { shouldPlay: false }
-        );
-        await soundThud.current.loadAsync(
-          { uri: 'https://cdn.pixabay.com/download/audio/2021/08/04/audio_0625c1539c.mp3?filename=thud-104443.mp3' },
-          { shouldPlay: false }
-        );
-        if (isMounted) setSoundsLoaded(true);
-      } catch (e) {
-        console.log('Piece3D sound load error (ignoring if assets missing):', e);
-      }
-    };
-    loadSounds();
-
-    return () => {
-      isMounted = false;
-      soundPop.current.unloadAsync();
-      soundThud.current.unloadAsync();
-    };
-  }, []);
 
   useEffect(() => {
     if (selected) {
@@ -91,16 +55,9 @@ const Piece3D = ({ color = 'red', selected = false, onPress, moving = false, siz
         }),
       ]).start();
 
-      const playMoveSound = async () => {
-        if (soundsLoaded) {
-          try {
-            await soundPop.current.replayAsync();
-          } catch (e) {}
-        }
-      };
-      playMoveSound();
+      playSound('move');
     }
-  }, [moving, translateY, soundsLoaded]);
+  }, [moving, translateY]);
 
   return (
     <TouchableWithoutFeedback onPress={onPress}>
