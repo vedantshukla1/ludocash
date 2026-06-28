@@ -21,6 +21,7 @@ export const GRADIENTS = {
   background: ['#0F1E3D', '#1A2A4D'], // Deep blue gradient
   gold: ['#FFD700', '#FFA000'], // Bright gold gradient
   darkCard: ['#1A2A4D', '#0F1E3D'],
+  backgroundSplash: ['#1F004D', '#0A001A'], // Rich deep purple for Splash
 };
 
 export const SHADOWS = {
