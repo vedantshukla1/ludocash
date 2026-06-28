@@ -3,568 +3,362 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   Animated,
   StatusBar,
-  Alert,
-  RefreshControl,
-  Modal,
+  Dimensions,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useAuth } from '../context/AuthContext';
-import { gameAPI, authAPI, walletAPI } from '../services/api';
 import { COLORS, GRADIENTS, SPACING, RADIUS, SHADOWS } from '../utils/theme';
+import Dice3D from '../components/Dice3D';
 
-const GAME_MODES = [
-  {
-    id: '2player',
-    title: '2 Player',
-    subtitle: '1 vs 1',
-    emoji: '⚔️',
-    fees: [10, 50, 100, 500],
-    cutPercent: 10,
-    gradient: ['#FF6B6B', '#FF4444'],
-    description: 'Head-to-head battle',
-  },
-  {
-    id: '4player',
-    title: '4 Player',
-    subtitle: 'Free for All',
-    emoji: '🎯',
-    fees: [10, 50, 100, 500],
-    cutPercent: 15,
-    gradient: ['#6BA8FF', '#4488FF'],
-    description: 'Last one standing wins',
-  },
-  {
-    id: 'tournament',
-    title: 'Tournament',
-    subtitle: 'Big Prize Pool',
-    emoji: '🏆',
-    fees: [50, 100, 500],
-    cutPercent: 20,
-    gradient: ['#FFE766', '#FFD700'],
-    description: 'Compete for glory',
-  },
-  {
-    id: 'computer',
-    title: 'vs Computer',
-    subtitle: 'Practice Mode',
-    emoji: '🤖',
-    fees: [0],
-    cutPercent: 0,
-    gradient: ['#00FFA3', '#00C880'],
-    description: 'Play with Computer (Free)',
-  },
-];
+const { width, height } = Dimensions.get('window');
 
 const HomeScreen = ({ navigation }) => {
-  const { user, refreshUser, logout } = useAuth();
-  const [waitingCounts, setWaitingCounts] = useState({});
-  const [refreshing, setRefreshing] = useState(false);
-  const [dailyBonusClaimed, setDailyBonusClaimed] = useState(false);
-  const [claimingBonus, setClaimingBonus] = useState(false);
-  const [showComputerModal, setShowComputerModal] = useState(false);
-
-  // Animations
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const cardAnims = useRef(GAME_MODES.map(() => new Animated.Value(0))).current;
+  const { user } = useAuth();
+  const [pulseAnim] = useState(new Animated.Value(1));
 
   useEffect(() => {
-    // Stagger card animations on mount
-    Animated.stagger(120, cardAnims.map((anim) =>
-      Animated.spring(anim, { toValue: 1, tension: 60, friction: 8, useNativeDriver: true }),
-    )).start();
-
-    // Pulse animation for daily bonus button
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, { toValue: 1.05, duration: 800, useNativeDriver: true }),
         Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-      ]),
+      ])
     ).start();
-
-    loadWaitingCounts();
-    checkDailyBonus();
   }, []);
 
-  const loadWaitingCounts = async () => {
-    const counts = {};
-    for (const mode of GAME_MODES) {
-      if (mode.id === 'computer') continue;
-      for (const fee of mode.fees) {
-        try {
-          const { data } = await gameAPI.getWaitingCount(mode.id, fee);
-          counts[`${mode.id}_${fee}`] = data.count;
-        } catch (_) {
-          counts[`${mode.id}_${fee}`] = 0;
-        }
-      }
-    }
-    setWaitingCounts(counts);
-  };
+  const walletTotal = user?.wallet?.balance || 0;
 
-  const checkDailyBonus = () => {
-    if (user?.dailyBonusLastClaimed) {
-      const last = new Date(user.dailyBonusLastClaimed);
-      const now = new Date();
-      if (
-        last.getDate() === now.getDate() &&
-        last.getMonth() === now.getMonth() &&
-        last.getFullYear() === now.getFullYear()
-      ) {
-        setDailyBonusClaimed(true);
-      }
-    }
-  };
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await Promise.all([refreshUser(), loadWaitingCounts()]);
-    setRefreshing(false);
-  };
-
-  const handleDailyBonus = async () => {
-    if (dailyBonusClaimed || claimingBonus) return;
-    setClaimingBonus(true);
-    try {
-      const { data } = await authAPI.dailyBonus();
-      await refreshUser();
-      setDailyBonusClaimed(true);
-      Alert.alert('🎁 Daily Bonus!', `₹${data.bonus} bonus added to your wallet!`);
-    } catch (err) {
-      const msg = err.response?.data?.error || 'Failed to claim daily bonus.';
-      Alert.alert('Oops', msg);
-    } finally {
-      setClaimingBonus(false);
-    }
-  };
-
-  const handleComputerModePress = () => {
-    setShowComputerModal(true);
-  };
-
-  const handleModePress = (mode) => {
-    if (mode.id === 'computer') {
-      handleComputerModePress();
-      return;
-    }
-    navigation.navigate('SelectFee', { mode });
-  };
-
-  const walletTotal = user?.wallet
-    ? (user.wallet.balance || 0)
-    : 0;
+  // Placeholder actions
+  const handleComingSoon = (feature) => alert(`${feature} feature coming soon!`);
 
   return (
     <LinearGradient colors={GRADIENTS.background} style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-      {/* Top bar */}
+      {/* Top Bar */}
       <View style={styles.topBar}>
-        <View style={styles.userInfo}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {user?.name ? user.name[0].toUpperCase() : '?'}
-            </Text>
+        <View style={styles.profileContainer}>
+          <View style={styles.avatarGlow}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarEmoji}>👦</Text>
+            </View>
           </View>
           <View>
-            <Text style={styles.greeting}>Good game,</Text>
-            <Text style={styles.userName}>{user?.name || 'Player'}</Text>
+            <Text style={styles.guestText}>Guest</Text>
+            <Text style={styles.guestId}>{user?._id?.substring(0,6) || '59328'}</Text>
           </View>
         </View>
-        <TouchableOpacity
-          style={styles.walletChip}
+
+        <TouchableOpacity 
+          style={styles.coinPill}
           onPress={() => navigation.navigate('Wallet')}
         >
-          <Text style={styles.walletEmoji}>💰</Text>
-          <Text style={styles.walletAmount}>₹{walletTotal.toFixed(0)}</Text>
+          <View style={styles.coinGlow}>
+             <Text style={styles.coinEmoji}>👑</Text>
+          </View>
+          <View style={styles.coinTextContainer}>
+             <Text style={styles.coinAmount}>{walletTotal}</Text>
+             <Text style={styles.coinLabel}>coins</Text>
+          </View>
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={COLORS.gold} />}
-        contentContainerStyle={styles.scroll}
-      >
-        {/* Welcome bonus banner */}
-        {!user?.welcomeBonusClaimed && (
-          <View style={styles.welcomeBanner}>
-            <Text style={styles.welcomeEmoji}>🎉</Text>
-            <View style={styles.welcomeText}>
-              <Text style={styles.welcomeTitle}>Welcome Bonus!</Text>
-              <Text style={styles.welcomeDesc}>₹20 has been added to your wallet</Text>
-            </View>
-          </View>
-        )}
-
-        {/* Daily bonus */}
-        <Animated.View style={{ transform: [{ scale: dailyBonusClaimed ? 1 : pulseAnim }] }}>
-          <TouchableOpacity
-            style={[styles.dailyBonus, dailyBonusClaimed && styles.dailyBonusClaimed]}
-            onPress={handleDailyBonus}
-            disabled={dailyBonusClaimed}
-          >
-            <Text style={styles.dailyBonusEmoji}>{dailyBonusClaimed ? '✅' : '🎁'}</Text>
-            <View style={styles.dailyBonusText}>
-              <Text style={styles.dailyBonusTitle}>
-                {dailyBonusClaimed ? 'Daily Bonus Claimed!' : 'Claim Daily Bonus'}
-              </Text>
-              <Text style={styles.dailyBonusDesc}>
-                {dailyBonusClaimed ? 'Come back tomorrow' : 'Get ₹2 free every day'}
-              </Text>
-            </View>
-            {!dailyBonusClaimed && (
-              <View style={styles.dailyBonusBadge}>
-                <Text style={styles.dailyBonusBadgeText}>₹2</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </Animated.View>
-
-        {/* Section title */}
-        <Text style={styles.sectionTitle}>🎮 Choose Game Mode</Text>
-
-        {/* Game mode cards - 2x2 Grid Layout */}
-        <View style={styles.gridContainer}>
-          {GAME_MODES.map((mode, index) => (
-            <Animated.View
-              key={mode.id}
-              style={[
-                styles.gridItem,
-                {
-                  opacity: cardAnims[index],
-                  transform: [{ translateY: cardAnims[index].interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }],
-                }
-              ]}
-            >
-              <TouchableOpacity
-                style={styles.modeCardGrid}
-                onPress={() => handleModePress(mode)}
-                activeOpacity={0.85}
-              >
-                <LinearGradient
-                  colors={['rgba(28, 61, 125, 0.85)', 'rgba(15, 32, 68, 0.6)']}
-                  style={styles.modeCardGradGrid}
-                >
-                  <Text style={styles.modeEmojiGrid}>{mode.emoji}</Text>
-                  <Text style={styles.modeTitleGrid}>{mode.title}</Text>
-                  <Text style={styles.modeSubtitleGrid}>{mode.subtitle}</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </Animated.View>
-          ))}
+      {/* LUDO ZONE Logo */}
+      <View style={styles.logoContainer}>
+        <Text style={[styles.logoLudo, styles.textLudoShadow]}>LUDO</Text>
+        <Text style={styles.logoLudo}>LUDO</Text>
+        <View style={styles.zoneWrapper}>
+          <Text style={[styles.logoZone, styles.textZoneShadow]}>ZONE</Text>
+          <Text style={styles.logoZone}>ZONE</Text>
         </View>
+      </View>
 
-        <View style={styles.bottomPad} />
-      </ScrollView>
-
-      {/* Custom Modal for vs Computer selection */}
-      <Modal
-        visible={showComputerModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowComputerModal(false)}
-      >
-        <TouchableOpacity 
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowComputerModal(false)}
-        >
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>🤖 vs Computer</Text>
-            <Text style={styles.modalSubtitle}>Select Number of Players</Text>
-            
-            <View style={styles.modalOptionsContainer}>
-              <TouchableOpacity 
-                style={styles.modalOptionBtn}
-                onPress={() => {
-                  setShowComputerModal(false);
-                  navigation.navigate('ComputerGame', { playersCount: 2 });
-                }}
-              >
-                <Text style={styles.modalOptionEmoji}>👥</Text>
-                <Text style={styles.modalOptionText}>2 Players</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.modalOptionBtn}
-                onPress={() => {
-                  setShowComputerModal(false);
-                  navigation.navigate('ComputerGame', { playersCount: 3 });
-                }}
-              >
-                <Text style={styles.modalOptionEmoji}>👥👤</Text>
-                <Text style={styles.modalOptionText}>3 Players</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.modalOptionBtn}
-                onPress={() => {
-                  setShowComputerModal(false);
-                  navigation.navigate('ComputerGame', { playersCount: 4 });
-                }}
-              >
-                <Text style={styles.modalOptionEmoji}>👥👥</Text>
-                <Text style={styles.modalOptionText}>4 Players</Text>
-              </TouchableOpacity>
+      {/* Center 3D Board Simulation */}
+      <View style={styles.centerStage}>
+         <View style={styles.boardOuter}>
+            <View style={styles.boardInner}>
+                <View style={styles.boardRed} />
+                <View style={styles.boardGreen} />
+                <View style={styles.boardYellow} />
+                <View style={styles.boardBlue} />
+                <View style={styles.centerStar}>
+                   <Text style={{fontSize: 20}}>⭐</Text>
+                </View>
             </View>
+         </View>
 
-            <TouchableOpacity 
-              style={styles.modalCancelBtn}
-              onPress={() => setShowComputerModal(false)}
-            >
-              <Text style={styles.modalCancelBtnText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+         {/* Floating Dice */}
+         <View style={{position: 'absolute', top: -30, left: 40, transform: [{rotate: '-20deg'}]}}>
+            <Dice3D value={6} size={50} />
+         </View>
+         <View style={{position: 'absolute', top: -10, right: 30, transform: [{rotate: '15deg'}]}}>
+            <Dice3D value={4} size={55} />
+         </View>
+
+         {/* Side Action Buttons - Left */}
+         <View style={styles.leftActions}>
+            <ActionButton icon="💰" label="Tokens" onPress={() => handleComingSoon('Tokens')} />
+            <ActionButton icon="🧩" label="Boards" onPress={() => handleComingSoon('Boards')} />
+            <ActionButton icon="🎲" label="Dice" onPress={() => handleComingSoon('Custom Dice')} />
+         </View>
+
+         {/* Side Action Buttons - Right */}
+         <View style={styles.rightActions}>
+            <ActionButton icon="🎡" label="Spin" onPress={() => handleComingSoon('Spin Wheel')} />
+            <ActionButton icon="📱" label="Follow" onPress={() => handleComingSoon('Social Follow')} />
+            <ActionButton icon="G" label="Google Login" onPress={() => handleComingSoon('Google Auth')} />
+         </View>
+      </View>
+
+      {/* Bottom Main Buttons */}
+      <View style={styles.bottomButtonsContainer}>
+        <GameModeCard
+          title="Multiplayer"
+          gradient={GRADIENTS.red}
+          icon="🔴"
+          onPress={() => navigation.navigate('SelectFee', { mode: { id: '4player', title: 'Multiplayer' } })}
+        />
+        <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+          <GameModeCard
+            title="Computer"
+            gradient={GRADIENTS.gold}
+            icon="🤖"
+            onPress={() => navigation.navigate('ComputerGame', { playersCount: 2 })}
+          />
+        </Animated.View>
+        <GameModeCard
+          title="Pass & Play"
+          gradient={GRADIENTS.green}
+          icon="⚔️"
+          onPress={() => handleComingSoon('Pass & Play')}
+        />
+      </View>
+
     </LinearGradient>
   );
 };
+
+const ActionButton = ({ icon, label, onPress }) => (
+  <TouchableOpacity style={styles.actionBtn} onPress={onPress}>
+    <LinearGradient colors={GRADIENTS.glassy} style={styles.actionBtnGrad}>
+       <Text style={styles.actionBtnIcon}>{icon}</Text>
+       <Text style={styles.actionBtnLabel}>{label}</Text>
+    </LinearGradient>
+  </TouchableOpacity>
+);
+
+const GameModeCard = ({ title, gradient, icon, onPress }) => (
+  <TouchableOpacity style={styles.gameModeCard} onPress={onPress} activeOpacity={0.8}>
+     <LinearGradient colors={gradient} style={styles.gameModeCardGrad}>
+        <Text style={styles.gameModeTitle}>{title}</Text>
+        <View style={styles.gameModeIconWrapper}>
+           <Text style={styles.gameModeIcon}>{icon}</Text>
+        </View>
+        <Text style={styles.gameModeTitle}>{title}</Text>
+     </LinearGradient>
+  </TouchableOpacity>
+);
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   topBar: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    padding: SPACING.md,
-    paddingTop: SPACING.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 215, 0, 0.25)',
-    backgroundColor: 'rgba(11, 27, 61, 0.9)',
-  },
-  userInfo: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.gold,
     alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.35)',
+    paddingHorizontal: 20,
+    paddingTop: 50,
   },
-  avatarText: { fontSize: 14, fontWeight: '900', color: '#0B1B3D' },
-  greeting: { fontSize: 9, color: COLORS.textMuted },
-  userName: { fontSize: 13, fontWeight: '700', color: COLORS.white },
-  walletChip: {
+  profileContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255, 215, 0, 0.15)',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.full,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 215, 0, 0.45)',
-  },
-  walletEmoji: { fontSize: 13 },
-  walletAmount: { color: COLORS.gold, fontWeight: '800', fontSize: 12 },
-  scroll: { padding: SPACING.md },
-  welcomeBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    backgroundColor: 'rgba(68,221,136,0.12)',
-    padding: SPACING.md,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: 'rgba(68,221,136,0.35)',
-    marginBottom: SPACING.md,
-  },
-  welcomeEmoji: { fontSize: 22 },
-  welcomeText: {},
-  welcomeTitle: { color: COLORS.green, fontWeight: '800', fontSize: 12 },
-  welcomeDesc: { color: COLORS.textSecondary, fontSize: 10, marginTop: 2 },
-  dailyBonus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    padding: SPACING.md,
-    borderRadius: RADIUS.md,
-    backgroundColor: 'rgba(255, 215, 0, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 215, 0, 0.35)',
-    marginBottom: SPACING.lg,
-  },
-  dailyBonusClaimed: {
-    opacity: 0.5,
-    borderColor: 'rgba(255,255,255,0.15)',
+    gap: 10,
     backgroundColor: 'rgba(255,255,255,0.05)',
-  },
-  dailyBonusEmoji: { fontSize: 18 },
-  dailyBonusText: { flex: 1 },
-  dailyBonusTitle: { color: COLORS.gold, fontWeight: '800', fontSize: 11 },
-  dailyBonusDesc: { color: COLORS.textSecondary, fontSize: 10, marginTop: 2 },
-  dailyBonusBadge: {
-    backgroundColor: COLORS.gold,
-    borderRadius: RADIUS.full,
-    paddingHorizontal: SPACING.sm + 2,
-    paddingVertical: 4,
-  },
-  dailyBonusBadgeText: { color: '#0B1B3D', fontWeight: '900', fontSize: 10 },
-  sectionTitle: { color: COLORS.white, fontSize: 14, fontWeight: '800', marginBottom: SPACING.md },
-  modeCard: {
-    borderRadius: RADIUS.lg,
-    marginBottom: SPACING.md,
+    paddingRight: 20,
+    borderRadius: 30,
     borderWidth: 1,
-    borderColor: 'rgba(255, 215, 0, 0.2)',
-    overflow: 'hidden',
-    ...SHADOWS.card,
+    borderColor: 'rgba(0,201,255,0.3)',
   },
-  gridContainer: {
+  avatarGlow: {
+    padding: 3,
+    borderRadius: 25,
+    backgroundColor: 'rgba(0,201,255,0.2)',
+    ...SHADOWS.glowGlass,
+    shadowColor: '#00C9FF',
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#0F1E3D',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarEmoji: { fontSize: 24 },
+  guestText: { color: COLORS.white, fontWeight: '900', fontSize: 16 },
+  guestId: { color: COLORS.textMuted, fontWeight: '700', fontSize: 12 },
+  
+  coinPill: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: SPACING.md,
-    marginBottom: SPACING.lg,
-  },
-  gridItem: {
-    width: '47%',
-  },
-  modeCardGrid: {
-    borderRadius: RADIUS.md,
-    borderWidth: 1.2,
-    borderColor: 'rgba(255, 215, 0, 0.25)',
-    overflow: 'hidden',
-    ...SHADOWS.card,
-    height: 125,
-  },
-  modeCardGradGrid: {
-    flex: 1,
-    padding: SPACING.sm + 2,
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  modeEmojiGrid: {
-    fontSize: 28,
-    marginBottom: 2,
-  },
-  modeTitleGrid: {
-    color: COLORS.gold,
-    fontWeight: '800',
-    fontSize: 12,
-    textAlign: 'center',
-  },
-  modeSubtitleGrid: {
-    color: COLORS.textSecondary,
-    fontSize: 9,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  feeRow: { flexDirection: 'row', gap: SPACING.sm, flexWrap: 'wrap' },
-  feeChip: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderRadius: RADIUS.md,
-    padding: SPACING.sm + 2,
-    alignItems: 'center',
-    minWidth: 68,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    position: 'relative',
-  },
-  feeChipEntry: { color: COLORS.white, fontWeight: '800', fontSize: 11 },
-  feeChipPrize: { color: COLORS.gold, fontWeight: '600', fontSize: 8, marginTop: 2 },
-  waitingDot: {
-    position: 'absolute',
-    top: -6,
-    right: -6,
-    backgroundColor: COLORS.blue,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  waitingDotText: { color: COLORS.white, fontSize: 8, fontWeight: '900' },
-  platformCut: {
-    color: COLORS.textMuted,
-    fontSize: 8,
-    marginTop: SPACING.sm,
-    textAlign: 'right',
-  },
-  playCompBtn: {
-    backgroundColor: 'rgba(255, 215, 0, 0.15)',
-    paddingVertical: SPACING.md,
-    borderRadius: RADIUS.md,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 215, 0, 0.45)',
-    marginTop: SPACING.xs,
-  },
-  playCompText: {
-    color: COLORS.gold,
-    fontWeight: '800',
-    fontSize: 12,
-  },
-  bottomPad: { height: 20 },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    width: '82%',
-    backgroundColor: '#0B1B3D',
-    borderRadius: RADIUS.lg,
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    borderRadius: 30,
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 215, 0, 0.35)',
-    padding: SPACING.lg,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.5,
-    shadowRadius: 15,
-    elevation: 20,
+    borderColor: '#FFD700',
+    paddingRight: 15,
+    paddingLeft: 2,
+    paddingVertical: 2,
+    ...SHADOWS.glowGlass,
+    shadowColor: '#FFD700',
   },
-  modalTitle: {
-    fontSize: 18,
+  coinGlow: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFD100',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  coinEmoji: { fontSize: 20 },
+  coinTextContainer: { alignItems: 'center' },
+  coinAmount: { color: '#FFD700', fontWeight: '900', fontSize: 16 },
+  coinLabel: { color: COLORS.white, fontWeight: '700', fontSize: 9, marginTop: -2 },
+
+  logoContainer: {
+    alignItems: 'center',
+    marginTop: 25,
+    zIndex: 10,
+  },
+  logoLudo: {
+    fontSize: 55,
     fontWeight: '900',
-    color: COLORS.gold,
-    marginBottom: 4,
+    color: '#FFEA00',
+    letterSpacing: 2,
+    position: 'absolute',
+    fontFamily: 'sans-serif-black',
   },
-  modalSubtitle: {
-    fontSize: 11,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.lg,
+  textLudoShadow: { color: '#FF8C00', top: 5 },
+  zoneWrapper: { marginTop: 40 },
+  logoZone: {
+    fontSize: 40,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 3,
+    position: 'absolute',
+    fontFamily: 'sans-serif-black',
+    alignSelf: 'center',
   },
-  modalOptionsContainer: {
-    width: '100%',
-    gap: SPACING.sm + 2,
-  },
-  modalOptionBtn: {
-    flexDirection: 'row',
+  textZoneShadow: { color: '#0083B0', top: 4 },
+
+  centerStage: {
+    height: 250,
+    marginTop: 30,
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    gap: SPACING.md,
+    justifyContent: 'center',
   },
-  modalOptionEmoji: {
-    fontSize: 18,
+  boardOuter: {
+    width: 220,
+    height: 220,
+    backgroundColor: '#FFD700',
+    borderRadius: 20,
+    transform: [{ rotateX: '45deg' }, { rotateZ: '45deg' }],
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SHADOWS.gold,
   },
-  modalOptionText: {
+  boardInner: {
+    width: 200,
+    height: 200,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 15,
+    flexWrap: 'wrap',
+    flexDirection: 'row',
+  },
+  boardRed: { width: 100, height: 100, backgroundColor: '#FF4444', borderTopLeftRadius: 15 },
+  boardGreen: { width: 100, height: 100, backgroundColor: '#00C853', borderTopRightRadius: 15 },
+  boardBlue: { width: 100, height: 100, backgroundColor: '#0091EA', borderBottomLeftRadius: 15 },
+  boardYellow: { width: 100, height: 100, backgroundColor: '#FFB300', borderBottomRightRadius: 15 },
+  centerStar: {
+    position: 'absolute',
+    top: 75,
+    left: 75,
+    width: 50,
+    height: 50,
+    backgroundColor: '#9C27B0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  
+  leftActions: {
+    position: 'absolute',
+    left: 15,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+  },
+  rightActions: {
+    position: 'absolute',
+    right: 15,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+  },
+  actionBtn: {
+    width: 65,
+    height: 65,
+    borderRadius: 15,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    ...SHADOWS.glowGlass,
+  },
+  actionBtnGrad: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionBtnIcon: { fontSize: 24, marginBottom: 2 },
+  actionBtnLabel: { color: COLORS.white, fontSize: 9, fontWeight: '800', textAlign: 'center' },
+
+  bottomButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginTop: 40,
+    height: 140,
+  },
+  gameModeCard: {
+    width: (width - 60) / 3,
+    height: 140,
+    borderRadius: 15,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.4)',
+    overflow: 'hidden',
+    ...SHADOWS.glowGlass,
+  },
+  gameModeCardGrad: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 15,
+  },
+  gameModeTitle: {
     color: COLORS.white,
-    fontWeight: '800',
+    fontWeight: '900',
     fontSize: 12,
+    textAlign: 'center',
   },
-  modalCancelBtn: {
-    marginTop: SPACING.lg,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.lg,
+  gameModeIconWrapper: {
+    flex: 1,
+    justifyContent: 'center',
   },
-  modalCancelBtnText: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-    fontWeight: '700',
-  },
+  gameModeIcon: {
+    fontSize: 36,
+  }
 });
 
 export default HomeScreen;
