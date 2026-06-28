@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, Animated, Easing } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Animated, Easing, Alert } from 'react-native';
 import { COLORS, SPACING, RADIUS, SHADOWS } from '../utils/theme';
 
 let alertRef = null;
@@ -7,8 +7,8 @@ let alertRef = null;
 export const CustomAlertManager = () => {
   const [visible, setVisible] = useState(false);
   const [config, setConfig] = useState(null);
-  const scaleValue = React.useRef(new Animated.Value(0.8)).current;
-  const opacityValue = React.useRef(new Animated.Value(0)).current;
+  const scaleValue = useRef(new Animated.Value(0.8)).current;
+  const opacityValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     alertRef = {
@@ -107,9 +107,7 @@ const CustomAlert = {
       alertRef.show(title, message, buttons);
     } else {
       // Fallback to native if not mounted yet
-      import('react-native').then(({ Alert }) => {
-        Alert.alert(title, message, buttons);
-      });
+      Alert.alert(title, message, buttons);
     }
   },
 };

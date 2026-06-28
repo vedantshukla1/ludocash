@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -15,9 +15,13 @@ import Dice3D from '../components/Dice3D';
 
 const { width, height } = Dimensions.get('window');
 
+const BOARD_SIZE = width * 0.45;
+const PIECE_SIZE = BOARD_SIZE * 0.15;
+const DICE_SIZE = BOARD_SIZE * 0.22;
+
 const SplashScreen = ({ navigation }) => {
   const { initialized, isLoggedIn } = useAuth();
-  const [animationDone, setAnimationDone] = React.useState(false);
+  const [animationDone, setAnimationDone] = useState(false);
 
   // Animations
   const logoScale = useRef(new Animated.Value(0)).current;
