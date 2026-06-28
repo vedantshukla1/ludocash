@@ -7,9 +7,6 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { preloadSounds, startMusic } from './src/utils/sounds';
 import CustomAlert, { CustomAlertManager } from './src/components/CustomAlert';
 
-// Globally override React Native's Alert.alert to use our styled CustomAlert
-Alert.alert = CustomAlert.alert;
-
 const App = () => {
   useEffect(() => {
     preloadSounds();

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import {
+import { 
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, StatusBar, Alert, Switch,
-} from 'react-native';
+ } from 'react-native';
+import CustomAlert from '../components/CustomAlert';
 import { useFocusEffect } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useAuth } from '../context/AuthContext';
@@ -34,7 +35,7 @@ const ProfileScreen = ({ navigation }) => {
   const handleToggleSfx = () => setSfxOn(toggleSfx());
 
   const handleLogout = () => {
-    Alert.alert(
+    CustomAlert.alert(
       'Logout',
       'Are you sure you want to logout?',
       [
@@ -56,7 +57,7 @@ const ProfileScreen = ({ navigation }) => {
       navigation.navigate(item.screen);
       return;
     }
-    Alert.alert(item.label, 'Coming soon!');
+    CustomAlert.alert(item.label, 'Coming soon!');
   };
 
   useFocusEffect(

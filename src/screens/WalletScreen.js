@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
+import { 
   View, Text, StyleSheet, TouchableOpacity, TextInput,
   ScrollView, StatusBar, Alert, ActivityIndicator, RefreshControl,
-} from 'react-native';
+ } from 'react-native';
+import CustomAlert from '../components/CustomAlert';
 import LinearGradient from 'react-native-linear-gradient';
 import { walletAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -61,8 +62,8 @@ const WalletScreen = () => {
 
   const handleDeposit = async (depositAmount) => {
     const amt = parseFloat(depositAmount || amount);
-    if (!amt || amt < 10) return Alert.alert('Invalid Amount', 'Minimum deposit is ₹10.');
-    if (amt > 100000) return Alert.alert('Invalid Amount', 'Maximum deposit is ₹1,00,000.');
+    if (!amt || amt < 10) return CustomAlert.alert('Invalid Amount', 'Minimum deposit is ₹10.');
+    if (amt > 100000) return CustomAlert.alert('Invalid Amount', 'Maximum deposit is ₹1,00,000.');
 
     setLoading(true);
     try {
@@ -97,18 +98,18 @@ const WalletScreen = () => {
           await refreshUser();
           setAmount('');
           loadTransactions(1);
-          Alert.alert(
+          CustomAlert.alert(
             '💰 Deposit Successful!',
             `₹${amt} added to wallet!${verifyResult.bonus > 0 ? `\n+ ₹${verifyResult.bonus} bonus!` : ''}`,
           );
         })
         .catch((err) => {
           if (err.code !== 2) { // 2 = user cancelled
-            Alert.alert('Payment Failed', err.description || 'Payment could not be processed.');
+            CustomAlert.alert('Payment Failed', err.description || 'Payment could not be processed.');
           }
         });
     } catch (err) {
-      Alert.alert('Error', err.response?.data?.error || 'Failed to initiate payment.');
+      CustomAlert.alert('Error', err.response?.data?.error || 'Failed to initiate payment.');
     } finally {
       setLoading(false);
     }
@@ -116,15 +117,15 @@ const WalletScreen = () => {
 
   const handleWithdraw = async () => {
     const amt = parseFloat(amount);
-    if (!amt || amt < 100) return Alert.alert('Invalid Amount', 'Minimum withdrawal is ₹100.');
-    if (!upiId || !upiId.includes('@')) return Alert.alert('Invalid UPI', 'Enter a valid UPI ID (e.g. name@upi).');
+    if (!amt || amt < 100) return CustomAlert.alert('Invalid Amount', 'Minimum withdrawal is ₹100.');
+    if (!upiId || !upiId.includes('@')) return CustomAlert.alert('Invalid UPI', 'Enter a valid UPI ID (e.g. name@upi).');
 
     const withdrawable = user?.wallet?.withdrawable || 0;
     if (amt > withdrawable) {
-      return Alert.alert('Insufficient Balance', `Available withdrawable balance: ₹${withdrawable.toFixed(0)}`);
+      return CustomAlert.alert('Insufficient Balance', `Available withdrawable balance: ₹${withdrawable.toFixed(0)}`);
     }
 
-    Alert.alert(
+    CustomAlert.alert(
       'Confirm Withdrawal',
       `Withdraw ₹${amt} to ${upiId}?\nProcessing within 24 hours.`,
       [
@@ -139,9 +140,9 @@ const WalletScreen = () => {
               setAmount('');
               setUpiId('');
               loadTransactions(1);
-              Alert.alert('✅ Withdrawal Requested', 'Your withdrawal will be processed within 24 hours.');
+              CustomAlert.alert('✅ Withdrawal Requested', 'Your withdrawal will be processed within 24 hours.');
             } catch (err) {
-              Alert.alert('Error', err.response?.data?.error || 'Withdrawal failed.');
+              CustomAlert.alert('Error', err.response?.data?.error || 'Withdrawal failed.');
             } finally {
               setLoading(false);
             }

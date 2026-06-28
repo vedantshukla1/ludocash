@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import {
+import { 
   View,
   Text,
   TextInput,
@@ -12,7 +12,8 @@ import {
   StatusBar,
   ActivityIndicator,
   Alert,
-} from 'react-native';
+ } from 'react-native';
+import CustomAlert from '../components/CustomAlert';
 import LinearGradient from 'react-native-linear-gradient';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { authAPI } from '../services/api';
@@ -53,7 +54,7 @@ const LoginScreen = ({ navigation }) => {
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
-      return Alert.alert('Missing Fields', 'Please enter your email and password.');
+      return CustomAlert.alert('Missing Fields', 'Please enter your email and password.');
     }
     setLoading(true);
     try {
@@ -62,7 +63,7 @@ const LoginScreen = ({ navigation }) => {
       navigation.replace('Main');
     } catch (err) {
       const msg = err.response?.data?.error || 'Login failed. Please try again.';
-      Alert.alert('Login Failed', msg);
+      CustomAlert.alert('Login Failed', msg);
     } finally {
       setLoading(false);
     }
@@ -70,10 +71,10 @@ const LoginScreen = ({ navigation }) => {
 
   const handleRegister = async () => {
     if (!regName.trim() || !regEmail.trim() || !regPassword) {
-      return Alert.alert('Missing Fields', 'Please fill all required fields.');
+      return CustomAlert.alert('Missing Fields', 'Please fill all required fields.');
     }
     if (regPassword.length < 6) {
-      return Alert.alert('Weak Password', 'Password must be at least 6 characters.');
+      return CustomAlert.alert('Weak Password', 'Password must be at least 6 characters.');
     }
     setLoading(true);
     try {
@@ -83,11 +84,11 @@ const LoginScreen = ({ navigation }) => {
         password: regPassword,
       });
       await login(data.accessToken, data.refreshToken, data.user);
-      Alert.alert('Welcome! 🎉', '₹50 welcome bonus has been added to your wallet!');
+      CustomAlert.alert('Welcome! 🎉', '₹50 welcome bonus has been added to your wallet!');
       navigation.replace('Main');
     } catch (err) {
       const msg = err.response?.data?.error || 'Registration failed.';
-      Alert.alert('Registration Failed', msg);
+      CustomAlert.alert('Registration Failed', msg);
     } finally {
       setLoading(false);
     }
@@ -106,7 +107,7 @@ const LoginScreen = ({ navigation }) => {
     } catch (err) {
       if (err.code === statusCodes.SIGN_IN_CANCELLED) return;
       const msg = err.response?.data?.error || 'Google sign-in failed.';
-      Alert.alert('Google Sign-In Failed', msg);
+      CustomAlert.alert('Google Sign-In Failed', msg);
     } finally {
       setGoogleLoading(false);
     }

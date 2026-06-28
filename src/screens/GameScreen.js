@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import {
+import { 
   View, Text, StyleSheet, TouchableOpacity, Animated,
   Alert, StatusBar, Dimensions, BackHandler, Vibration,
-} from 'react-native';
+ } from 'react-native';
+import CustomAlert from '../components/CustomAlert';
 import LinearGradient from 'react-native-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { getSocket, emit, on, off } from '../services/socket';
@@ -80,7 +81,7 @@ const GameScreen = ({ route, navigation }) => {
 
     // Block back button during game
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      Alert.alert('Leave Game?', 'Leaving will forfeit the game.', [
+      CustomAlert.alert('Leave Game?', 'Leaving will forfeit the game.', [
         { text: 'Stay', style: 'cancel' },
         { text: 'Leave', style: 'destructive', onPress: () => {
           emit('leave_game', { gameId: gameData.gameId });
@@ -346,7 +347,7 @@ const GameScreen = ({ route, navigation }) => {
       if (!mountedRef.current) return;
       setDisqualifiedColors((prev) => [...prev, color]);
       const name = color === 'red' ? 'You' : players.find((p) => p.color === color)?.name || color;
-      Alert.alert('Disqualified 🚫', `${name} missed 3 turns and was disqualified.`);
+      CustomAlert.alert('Disqualified 🚫', `${name} missed 3 turns and was disqualified.`);
     });
 
     socket.on('disconnect', () => {
@@ -389,7 +390,7 @@ const GameScreen = ({ route, navigation }) => {
     socket.on('error_event', ({ message }) => {
       if (!mountedRef.current) return;
       setRollingDice(false);
-      Alert.alert('Game Error', message);
+      CustomAlert.alert('Game Error', message);
     });
   };
 

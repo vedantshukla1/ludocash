@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
+import { 
   View, Text, StyleSheet, TouchableOpacity, Animated,
   Alert, StatusBar, BackHandler, ActivityIndicator,
-} from 'react-native';
+ } from 'react-native';
+import CustomAlert from '../components/CustomAlert';
 import LinearGradient from 'react-native-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { playSound, toggleMusic, toggleSfx, isMusicEnabled, isSfxEnabled } from '../utils/sounds';
@@ -118,7 +119,7 @@ const ComputerGameScreen = ({ route, navigation }) => {
   // ─── Hardware Back Trigger ───────────────────────────────────────────────────
   useEffect(() => {
     const backAction = () => {
-      Alert.alert('Quit Game', 'Are you sure you want to quit this practice game?', [
+      CustomAlert.alert('Quit Game', 'Are you sure you want to quit this practice game?', [
         { text: 'Stay', style: 'cancel' },
         { text: 'Quit', style: 'destructive', onPress: () => navigation.replace('Main') },
       ]);
@@ -153,7 +154,7 @@ const ComputerGameScreen = ({ route, navigation }) => {
         setWinner(entry.color);
         playSound(entry.color === 'red' ? 'win' : 'lose');
         const winnerName = players.find((p) => p.color === entry.color)?.name || 'Player';
-        Alert.alert(
+        CustomAlert.alert(
           entry.color === 'red' ? 'Victory! 🎉' : 'Game Over 🤖',
           entry.color === 'red' ? 'You defeated the computer!' : `${winnerName} won this time.`,
           [{ text: 'Exit to Lobby', onPress: () => navigation.replace('Main') }]
@@ -421,13 +422,13 @@ const ComputerGameScreen = ({ route, navigation }) => {
       if (nextCounts[curColor] >= 3) {
         if (curColor === 'red') {
           setWinner('computer_win');
-          Alert.alert(
+          CustomAlert.alert(
             'Game Over 🚫',
             'You missed 3 turns and lost the game.',
             [{ text: 'Exit to Lobby', onPress: () => navigation.replace('Main') }]
           );
         } else {
-          Alert.alert('Disqualified 🚫', `${players.find(p => p.color === curColor)?.name || curColor} missed 3 turns and was disqualified.`);
+          CustomAlert.alert('Disqualified 🚫', `${players.find(p => p.color === curColor)?.name || curColor} missed 3 turns and was disqualified.`);
           passTurn(getNextTurnColor(curColor));
         }
       } else {
@@ -561,7 +562,7 @@ const ComputerGameScreen = ({ route, navigation }) => {
       {/* Header */}
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => {
-          Alert.alert('Quit Game', 'Quit this practice match?', [
+          CustomAlert.alert('Quit Game', 'Quit this practice match?', [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Quit', style: 'destructive', onPress: () => navigation.replace('Main') }
           ]);

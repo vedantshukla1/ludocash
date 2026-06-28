@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
+import { 
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, Animated, StatusBar, Alert, ActivityIndicator,
-} from 'react-native';
+ } from 'react-native';
+import CustomAlert from '../components/CustomAlert';
 import LinearGradient from 'react-native-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { connectSocket, getSocket, emit, on, off } from '../services/socket';
@@ -73,7 +74,7 @@ const SelectFeeScreen = ({ route, navigation }) => {
 
     const balance = user?.wallet?.balance || 0;
     if (balance < selectedFee) {
-      Alert.alert(
+      CustomAlert.alert(
         'Insufficient Balance',
         `You need ₹${selectedFee} to join. Your balance: ₹${balance.toFixed(0)}`,
         [
@@ -104,17 +105,17 @@ const SelectFeeScreen = ({ route, navigation }) => {
 
       socket.on('insufficient_balance', ({ required, current }) => {
         setSearching(false);
-        Alert.alert('Insufficient Balance', `Need ₹${required}, have ₹${current}`);
+        CustomAlert.alert('Insufficient Balance', `Need ₹${required}, have ₹${current}`);
       });
 
       socket.on('error_event', ({ message }) => {
         setSearching(false);
-        Alert.alert('Error', message);
+        CustomAlert.alert('Error', message);
       });
 
       emit('join_pool', { mode: mode.id, fee: selectedFee });
     } catch (err) {
-      Alert.alert('Connection Error', err.message || 'Failed to connect. Check your internet connection.');
+      CustomAlert.alert('Connection Error', err.message || 'Failed to connect. Check your internet connection.');
       setSearching(false);
     }
   };
