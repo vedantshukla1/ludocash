@@ -271,15 +271,14 @@ const styles = StyleSheet.create({
   logoText: { fontSize: 28, fontWeight: '900', color: COLORS.gold, letterSpacing: 2 },
   subtitle: { color: COLORS.textSecondary, marginTop: 4, fontSize: 11, letterSpacing: 1 },
   card: {
-    backgroundColor: 'rgba(15, 32, 22, 0.75)',
+    backgroundColor: COLORS.surface,
     borderRadius: RADIUS.xl,
     padding: SPACING.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 255, 163, 0.15)',
+    ...SHADOWS.medium,
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(0, 255, 163, 0.08)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: RADIUS.lg,
     marginBottom: SPACING.lg,
     position: 'relative',

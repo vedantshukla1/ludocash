@@ -6,9 +6,16 @@ const Dice3D = ({ value = 1, rolling = false, onRollComplete, onPress, disabled,
   const rotateX = useRef(new Animated.Value(0)).current;
   const rotateY = useRef(new Animated.Value(0)).current;
   const [displayValue, setDisplayValue] = useState(value);
+  const latestValue = useRef(value);
+  const isAnimating = useRef(false);
+
+  useEffect(() => {
+    latestValue.current = value;
+  }, [value]);
 
   useEffect(() => {
     if (rolling) {
+      isAnimating.current = true;
       // Play sound
       playSound('dice');
 
@@ -38,10 +45,10 @@ const Dice3D = ({ value = 1, rolling = false, onRollComplete, onPress, disabled,
           useNativeDriver: true,
         })
       ]).start(() => {
-        // We set displayValue to the final value after the main rapid spins
-        setDisplayValue(value);
+        isAnimating.current = false;
+        setDisplayValue(latestValue.current);
         if (onRollComplete) {
-          onRollComplete(value);
+          onRollComplete(latestValue.current);
         }
       });
 
@@ -52,12 +59,13 @@ const Dice3D = ({ value = 1, rolling = false, onRollComplete, onPress, disabled,
       
       setTimeout(() => {
         clearInterval(interval);
-        setDisplayValue(value);
       }, 500);
     } else {
-      setDisplayValue(value);
+      if (!isAnimating.current) {
+        setDisplayValue(value);
+      }
     }
-  }, [rolling, value, rotateX, rotateY]);
+  }, [rolling]);
 
   const spinX = rotateX.interpolate({
     inputRange: [0, 720],
@@ -82,6 +90,7 @@ const Dice3D = ({ value = 1, rolling = false, onRollComplete, onPress, disabled,
     };
 
     const getDotsForValue = (val) => {
+      if (val === null || val === undefined) return [];
       switch (val) {
         case 1: return [positions.c];
         case 2: return [positions.tl, positions.br];

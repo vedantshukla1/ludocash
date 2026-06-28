@@ -340,8 +340,8 @@ const LudoBoard = ({ gameState, players, myColor, movablePieces, onPiecePress })
 
 const styles = StyleSheet.create({
   boardWrapper: {
-    width: SIZE,
-    height: SIZE,
+    width: SIZE + 12,
+    height: SIZE + 12,
     borderRadius: 12,
     overflow: 'hidden',
     borderWidth: 6,

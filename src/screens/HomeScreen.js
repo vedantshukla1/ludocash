@@ -68,7 +68,7 @@ const HomeScreen = ({ navigation }) => {
           <View>
             <Text style={styles.greeting}>Welcome back,</Text>
             <Text style={styles.username}>
-              {user?.username || 'Guest'}
+              {user?.name || 'Guest'}
             </Text>
           </View>
         </View>
