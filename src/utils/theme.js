@@ -13,6 +13,13 @@ export const COLORS = {
   success: '#00C853',
   danger: '#FF3D00',
   white: '#FFFFFF',
+  gold: '#FFD700',
+  textSecondary: '#E0E0E0',
+  error: '#FF3D00',
+  warning: '#FFB300',
+  green: '#00C853',
+  blue: '#0052CC',
+  red: '#E53935',
 };
 
 export const GRADIENTS = {
@@ -22,6 +29,7 @@ export const GRADIENTS = {
   gold: ['#FFD700', '#FFA000'], // Bright gold gradient
   darkCard: ['#1A2A4D', '#0F1E3D'],
   backgroundSplash: ['#1F004D', '#0A001A'], // Rich deep purple for Splash
+  goldButton: ['#FFD700', '#FFA000'],
 };
 
 export const SHADOWS = {
