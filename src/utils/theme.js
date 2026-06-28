@@ -1,3 +1,7 @@
+import { Dimensions } from 'react-native';
+
+const { width, height } = Dimensions.get('window');
+
 export const COLORS = {
   primary: '#0052CC',
   secondary: '#FFB300',
@@ -90,6 +94,23 @@ export const RADIUS = {
   round: 9999,
 };
 
+export const SCREEN = {
+  width,
+  height,
+};
+
+export const BOARD = {
+  size: width * 0.95,
+  cellSize: (width * 0.95) / 15,
+};
+
+export const PLAYER_COLORS = {
+  red: { primary: '#E53935', secondary: '#FFCDD2' },
+  blue: { primary: '#1E88E5', secondary: '#BBDEFB' },
+  green: { primary: '#43A047', secondary: '#C8E6C9' },
+  yellow: { primary: '#FFB300', secondary: '#FFECB3' },
+};
+
 export default {
   COLORS,
   GRADIENTS,
@@ -97,4 +118,7 @@ export default {
   TYPOGRAPHY,
   SPACING,
   RADIUS,
+  SCREEN,
+  BOARD,
+  PLAYER_COLORS,
 };
