@@ -16,7 +16,7 @@ import {
   COLOR_START, toAbsolute, getPathSteps,
 } from '../utils/ludoEngine';
 import LudoBoard from '../components/Board';
-import DiceComponent from '../components/Dice';
+import Dice3D from '../components/Dice3D';
 
 const EMOJIS = ['😂', '😤', '🔥', '👏', '😱'];
 const TURN_DURATION = 20;
@@ -489,7 +489,7 @@ const GameScreen = ({ route, navigation }) => {
           style={{ opacity: isActive ? 1 : 0 }}
           pointerEvents={isActive ? 'auto' : 'none'}
         >
-          <DiceComponent
+          <Dice3D
             value={isActive ? diceValue : null}
             rolling={isActive && rollingDice}
             onPress={handleRollDice}

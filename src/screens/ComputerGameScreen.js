@@ -14,7 +14,7 @@ import {
   toAbsolute, COLOR_START, getPathSteps,
 } from '../utils/ludoEngine';
 import LudoBoard from '../components/Board';
-import DiceComponent from '../components/Dice';
+import Dice3D from '../components/Dice3D';
 
 const INITIAL_PIECES = (color) => [
   { id: 0, state: 'base', position: -1, absolutePos: -1 },
@@ -542,7 +542,7 @@ const ComputerGameScreen = ({ route, navigation }) => {
           style={{ opacity: isActive ? 1 : 0 }}
           pointerEvents={isActive ? 'auto' : 'none'}
         >
-          <DiceComponent
+          <Dice3D
             value={isActive ? gameState.diceValue : null}
             rolling={isActive && rolling}
             onPress={onPressHandler}

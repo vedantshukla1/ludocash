@@ -5,7 +5,7 @@ import {
   MAIN_PATH_COORDS, HOME_COLUMN_COORDS, BASE_POSITIONS,
   SAFE_SQUARES, STAR_SQUARES, COLOR_START,
 } from '../utils/ludoEngine';
-import Piece from './Piece';
+import Piece3D from './Piece3D';
 
 const CELL = BOARD.cellSize;
 const SIZE = BOARD.size;
@@ -292,11 +292,11 @@ const LudoBoard = ({ gameState, players, myColor, movablePieces, onPiecePress })
             const centeredOffset = isBase ? (CELL * 1.2 - size) / 2 : (CELL - size) / 2;
             const topOffset = isBase ? centeredOffset - CELL * 0.06 : centeredOffset - CELL * 0.04;
             return (
-              <Piece
+              <Piece3D
                 key={`${p.color}_${p.pieceId}`}
                 color={p.color}
                 pieceId={p.pieceId}
-                isMovable={isMovable(p.color, p.pieceId)}
+                selected={isMovable(p.color, p.pieceId)}
                 onPress={() => onPiecePress(p.color, p.pieceId)}
                 size={size}
                 style={{
@@ -315,11 +315,11 @@ const LudoBoard = ({ gameState, players, myColor, movablePieces, onPiecePress })
               const cellWidth = isBase ? CELL * 1.2 : CELL;
               const centeredOffset = (cellWidth - size) / 2;
               return (
-                <Piece
+                <Piece3D
                   key={`${p.color}_${p.pieceId}`}
                   color={p.color}
                   pieceId={p.pieceId}
-                  isMovable={isMovable(p.color, p.pieceId)}
+                  selected={isMovable(p.color, p.pieceId)}
                   onPress={() => onPiecePress(p.color, p.pieceId)}
                   size={size}
                   style={{
