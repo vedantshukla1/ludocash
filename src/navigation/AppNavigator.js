@@ -4,7 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text, StyleSheet } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import { COLORS, SHADOWS } from '../utils/theme';
+import { COLORS } from '../utils/theme';
 
 // Screens
 import SplashScreen from '../screens/SplashScreen';
@@ -51,9 +51,6 @@ const MainTabs = () => (
       tabBarStyle: styles.tabBar,
       tabBarShowLabel: false,
       tabBarHideOnKeyboard: true,
-      tabBarBackground: () => (
-        <View style={styles.tabBarBackground} />
-      ),
     }}
   >
     <Tab.Screen
@@ -133,29 +130,17 @@ const AppNavigator = () => {
 
 const styles = StyleSheet.create({
   tabBar: {
-    position: 'absolute',
-    bottom: 20,
-    left: 15,
-    right: 15,
-    elevation: 0,
-    backgroundColor: 'rgba(59, 10, 123, 0.7)',
-    borderRadius: 30,
-    height: 70,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    paddingBottom: 0,
-    ...SHADOWS.glowPrimary,
-  },
-  tabBarBackground: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 30,
+    backgroundColor: '#0F1E3D',
+    borderTopColor: 'rgba(255, 215, 0, 0.25)',
+    borderTopWidth: 1,
+    height: 65,
+    paddingBottom: 8,
+    paddingTop: 4,
   },
   tabIcon: {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
-    top: 5,
   },
   tabLabel: {
     fontSize: 9,

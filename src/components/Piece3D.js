@@ -61,11 +61,12 @@ const Piece3D = ({ color = 'red', selected = false, onPress, moving = false, siz
 
   return (
     <TouchableWithoutFeedback onPress={onPress}>
-      <View style={[style, { transform: [{ scale: size / 40 }] }]}>
+      <View style={[style, { width: size, height: size, alignItems: 'center', justifyContent: 'flex-end' }]}>
         <Animated.View style={[
           styles.container,
           {
             transform: [
+              { scale: size / 50 },
               { translateY },
               { scale }
             ]
@@ -108,10 +109,12 @@ const styles = StyleSheet.create({
     width: 50,
     height: 70,
     shadowColor: '#000',
-    shadowOffset: { width: 2, height: 4 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 4,
     elevation: 8,
+    // Add margin bottom so the base aligns inside the bounding box
+    marginBottom: -15,
   },
   ballHead: {
     width: 22, 
