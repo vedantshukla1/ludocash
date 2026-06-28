@@ -5,14 +5,14 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 // ─── Colors ───────────────────────────────────────────────────────────────────
 export const COLORS = {
   // Background
-  background: '#0B1B3D',
-  backgroundLight: '#15326C',
-  backgroundCard: '#1C3D7D',
+  background: '#2B045D',
+  backgroundLight: '#3D097A',
+  backgroundCard: '#4F1299',
 
   // Accent / Classic Gold
-  gold: '#FFD700',
-  goldDark: '#FFB300',
-  goldLight: '#FFE082',
+  gold: '#FFD100',
+  goldDark: '#FF9900',
+  goldLight: '#FFEE82',
 
   // Player colors (Ludo King Classic)
   red: '#D50000',
@@ -45,25 +45,26 @@ export const COLORS = {
   borderBright: 'rgba(255, 215, 0, 0.6)',
 
   // Overlays
-  overlay: 'rgba(0, 0, 0, 0.75)',
-  overlayLight: 'rgba(0, 0, 0, 0.4)',
+  overlay: 'rgba(20, 0, 40, 0.85)',
+  overlayLight: 'rgba(20, 0, 40, 0.45)',
   pureWhite: '#FFFFFF',
 };
 
 // ─── Gradients ────────────────────────────────────────────────────────────────
 export const GRADIENTS = {
-  background: ['#071126', '#0B1B3D', '#071126'],
+  background: ['#3A0088', '#1F004D'],
+  backgroundSplash: ['#00B4DB', '#0083B0', '#1F004D'], // Cyan to Purple
   card: ['rgba(255, 215, 0, 0.18)', 'rgba(255, 215, 0, 0.02)'],
-  gold: ['#FFE082', '#FFB300'],
-  goldButton: ['#FFB300', '#E67E22'], // Classic Orange/Gold buttons
-  red: ['#FF5252', '#D50000'],
-  blue: ['#40C4FF', '#0091EA'],
-  green: ['#69F0AE', '#00C853'],
-  yellow: ['#FFB300', '#E67E22'],
-  success: ['#69F0AE', '#00C853'],
-  danger: ['#FF5252', '#D50000'],
-  darkCard: ['#15326C', '#0B1B3D'],
-  purpleCard: ['#1C3D7D', '#0F1E3D'],
+  gold: ['#FFE082', '#FF9900'],
+  goldButton: ['#FFD100', '#FF8C00'], 
+  red: ['#FF416C', '#FF4B2B'],
+  blue: ['#00C9FF', '#92FE9D'], // Adjusted to match neon styling
+  green: ['#11998E', '#38EF7D'],
+  yellow: ['#F9D423', '#FF4E50'],
+  success: ['#11998E', '#38EF7D'],
+  danger: ['#FF416C', '#FF4B2B'],
+  darkCard: ['rgba(79, 18, 153, 0.8)', 'rgba(43, 4, 93, 0.8)'],
+  glassy: ['rgba(255,255,255,0.15)', 'rgba(255,255,255,0.05)'],
 };
 
 // ─── Shadows ──────────────────────────────────────────────────────────────────
@@ -71,16 +72,16 @@ export const SHADOWS = {
   gold: {
     shadowColor: '#FFD700',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOpacity: 0.6,
+    shadowRadius: 10,
+    elevation: 8,
   },
   card: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 10,
   },
   piece: {
     shadowColor: '#000',
@@ -91,11 +92,25 @@ export const SHADOWS = {
   },
   button: {
     shadowColor: '#FFB300',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+    elevation: 8,
   },
+  glowPrimary: {
+    shadowColor: '#FF416C',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  glowGlass: {
+    shadowColor: '#FFFFFF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  }
 };
 
 // ─── Typography ───────────────────────────────────────────────────────────────
