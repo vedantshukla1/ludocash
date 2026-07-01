@@ -1,7 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BASE_URL = 'https://ludocash.onrender.com/api'; // Live Render URL
+const BASE_URL = 'https://ludocash.onrender.com/api'; // Switched to production Render URL
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -62,6 +62,8 @@ export const walletAPI = {
   withdraw: (data) => api.post('/wallet/withdraw', data),
   getBalance: () => api.get('/wallet/balance'),
   getTransactions: (params) => api.get('/wallet/transactions', { params }),
+  redeemReferral: (code) => api.post('/wallet/redeem-referral', { code }),
+  redeemCoupon: (code) => api.post('/wallet/redeem-coupon', { code }),
 };
 
 // ─── Game ─────────────────────────────────────────────────────────────────────

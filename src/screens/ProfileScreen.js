@@ -1,79 +1,149 @@
 import React, { useState } from 'react';
-import { 
-  View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, StatusBar, Alert, Switch,
- } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Alert, Switch, Modal, Image } from 'react-native';
 import CustomAlert from '../components/CustomAlert';
 import { useFocusEffect } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { COLORS, GRADIENTS, SPACING, RADIUS, SHADOWS } from '../utils/theme';
-import { toggleMusic, toggleSfx, isMusicEnabled, isSfxEnabled } from '../utils/sounds';
-
-const MENU_ITEMS = [
-  { id: 'history', icon: '📋', label: 'Transaction History', screen: 'Wallet' },
-  { id: 'wins', icon: '🏆', label: 'My Wins', screen: null },
-  { id: 'support', icon: '💬', label: 'Support', screen: null },
-  { id: 'terms', icon: '📄', label: 'Terms & Conditions', screen: 'Terms' },
-  { id: 'privacy', icon: '🔒', label: 'Privacy Policy', screen: 'Privacy' },
-];
-
-const StatCard = ({ icon, label, value, color }) => (
-  <View style={styles.statCard}>
+import { playSound, playVibration, toggleMusic, toggleSfx, isMusicEnabled, isSfxEnabled } from '../utils/sounds';
+import { authAPI } from '../services/api';
+const MENU_ITEMS = [{
+  id: 'history',
+  icon: '📋',
+  label: 'Transaction History',
+  screen: 'Wallet'
+}, {
+  id: 'refer',
+  icon: '🎁',
+  label: 'Refer & Earn',
+  screen: 'Referral'
+}, {
+  id: 'wins',
+  icon: '🏆',
+  label: 'My Wins',
+  screen: null
+}, {
+  id: 'support',
+  icon: '💬',
+  label: 'Support',
+  screen: null
+}, {
+  id: 'terms',
+  icon: '📄',
+  label: 'Terms & Conditions',
+  screen: 'Terms'
+}, {
+  id: 'privacy',
+  icon: '🔒',
+  label: 'Privacy Policy',
+  screen: 'Privacy'
+}];
+const AVATARS = ['https://api.dicebear.com/7.x/avataaars/png?seed=Felix&backgroundColor=b6e3f4', 'https://api.dicebear.com/7.x/avataaars/png?seed=Aneka&backgroundColor=ffdfbf', 'https://api.dicebear.com/7.x/avataaars/png?seed=Jack&backgroundColor=c0aede', 'https://api.dicebear.com/7.x/avataaars/png?seed=Luna&backgroundColor=ffd5dc', 'https://api.dicebear.com/7.x/avataaars/png?seed=Leo&backgroundColor=d1d4f9', 'https://api.dicebear.com/7.x/avataaars/png?seed=Milo&backgroundColor=b6e3f4', 'https://api.dicebear.com/7.x/avataaars/png?seed=Coco&backgroundColor=ffdfbf', 'https://api.dicebear.com/7.x/avataaars/png?seed=Simba&backgroundColor=c0aede', 'https://api.dicebear.com/7.x/avataaars/png?seed=Bella&backgroundColor=ffd5dc', 'https://api.dicebear.com/7.x/avataaars/png?seed=Oscar&backgroundColor=d1d4f9'];
+const StatCard = ({
+  icon,
+  label,
+  value,
+  color
+}) => <View style={styles.statCard}>
     <Text style={styles.statIcon}>{icon}</Text>
-    <Text style={[styles.statValue, color && { color }]}>{value}</Text>
+    <Text style={[styles.statValue, color && {
+    color
+  }]}>{value}</Text>
     <Text style={styles.statLabel}>{label}</Text>
-  </View>
-);
-
-const ProfileScreen = ({ navigation }) => {
-  const { user, logout, refreshUser } = useAuth();
+  </View>;
+const ProfileScreen = ({
+  navigation
+}) => {
+  const {
+    user,
+    logout,
+    refreshUser,
+    updateUser
+  } = useAuth();
   const [musicOn, setMusicOn] = useState(isMusicEnabled());
   const [sfxOn, setSfxOn] = useState(isSfxEnabled());
-
-  const handleToggleMusic = () => setMusicOn(toggleMusic());
-  const handleToggleSfx = () => setSfxOn(toggleSfx());
-
-  const handleLogout = () => {
-    CustomAlert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            await logout();
-            navigation.replace('Login');
-          },
-        },
-      ],
-    );
+  const [avatarModalVisible, setAvatarModalVisible] = useState(false);
+  const handleToggleMusic = () => {
+    playSound('button_click');
+    setMusicOn(toggleMusic());
   };
-
-  const handleMenuPress = (item) => {
+  const handleToggleSfx = () => {
+    const isNowOn = toggleSfx();
+    setSfxOn(isNowOn);
+    if (isNowOn) playSound('button_click');else playVibration(15);
+  };
+  const handleLogout = () => {
+    CustomAlert.alert('Logout', 'Are you sure you want to logout?', [{
+      text: 'Cancel',
+      style: 'cancel'
+    }, {
+      text: 'Logout',
+      style: 'destructive',
+      onPress: async () => {
+        await logout();
+        navigation.replace('Login');
+      }
+    }]);
+  };
+  const handleMenuPress = item => {
     if (item.screen) {
       navigation.navigate(item.screen);
       return;
     }
     CustomAlert.alert(item.label, 'Coming soon!');
   };
+  const selectAvatar = async url => {
+    playSound('button_click');
+    setAvatarModalVisible(false);
+    try {
+      // 1. Save to backend first
+      await authAPI.updateProfile({
+        avatar: url
+      });
 
-  useFocusEffect(
-    React.useCallback(() => {
-      refreshUser();
-    }, [refreshUser])
-  );
-
+      // 2. Update local context, it gets saved to AsyncStorage automatically
+      await updateUser({
+        avatar: url
+      });
+    } catch (err) {
+      console.log("Avatar save error:", err.response?.data || err.message);
+      CustomAlert.alert('Error', `Failed to save avatar: ${err.response?.data?.error || err.message}`);
+    }
+  };
+  useFocusEffect(React.useCallback(() => {
+    refreshUser();
+    setMusicOn(isMusicEnabled());
+    setSfxOn(isSfxEnabled());
+  }, [refreshUser]));
   const stats = user?.stats || {};
-  const winRate = stats.gamesPlayed > 0
-    ? Math.round((stats.wins / stats.gamesPlayed) * 100)
-    : 0;
-
-  return (
-    <LinearGradient colors={GRADIENTS.background} style={styles.container}>
+  const winRate = stats.gamesPlayed > 0 ? Math.round(stats.wins / stats.gamesPlayed * 100) : 0;
+  return <LinearGradient colors={GRADIENTS.background} style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+
+      {/* Avatar Selection Modal */}
+      <Modal visible={avatarModalVisible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Choose Avatar</Text>
+            <View style={styles.avatarGrid}>
+              {AVATARS.map((url, idx) => <TouchableOpacity key={idx} onPress={() => {
+              playSound("button_click");
+              return selectAvatar(url);
+            }} style={styles.avatarOption}>
+                  <Image source={{
+                uri: url
+              }} style={styles.avatarImageOption} />
+                </TouchableOpacity>)}
+            </View>
+            <TouchableOpacity style={styles.closeModalBtn} onPress={() => {
+            playSound("button_click");
+            return setAvatarModalVisible(false);
+          }}>
+              <Text style={styles.closeModalText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
@@ -83,14 +153,22 @@ const ProfileScreen = ({ navigation }) => {
 
         {/* Avatar + info */}
         <View style={styles.profileSection}>
-          <View style={styles.avatarContainer}>
+          <TouchableOpacity style={styles.avatarContainer} activeOpacity={0.8} onPress={() => {
+          playSound('button_click');
+          setAvatarModalVisible(true);
+        }}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {user?.name?.[0]?.toUpperCase() || '?'}
-              </Text>
+              {user?.avatar ? <Image source={{
+              uri: user.avatar
+            }} style={styles.avatarImage} /> : <Text style={styles.avatarText}>
+                  {user?.name?.[0]?.toUpperCase() || '?'}
+                </Text>}
             </View>
             <View style={styles.avatarGlow} />
-          </View>
+            <View style={styles.editBadge}>
+              <Text style={styles.editBadgeText}>✏️</Text>
+            </View>
+          </TouchableOpacity>
           <Text style={styles.displayName}>{user?.name || 'Player'}</Text>
           <Text style={styles.displayEmail}>{user?.email || ''}</Text>
 
@@ -106,12 +184,7 @@ const ProfileScreen = ({ navigation }) => {
           <StatCard icon="🎮" label="Games" value={stats.gamesPlayed || 0} />
           <StatCard icon="🏆" label="Wins" value={stats.wins || 0} color={COLORS.gold} />
           <StatCard icon="📊" label="Win Rate" value={`${winRate}%`} color={COLORS.green} />
-          <StatCard
-            icon="💵"
-            label="Earned"
-            value={`₹${(stats.totalWithdrawn || 0).toFixed(0)}`}
-            color={COLORS.gold}
-          />
+          <StatCard icon="💵" label="Earned" value={`₹${(stats.totalWithdrawn || 0).toFixed(0)}`} color={COLORS.gold} />
         </View>
 
         {/* Settings */}
@@ -119,66 +192,74 @@ const ProfileScreen = ({ navigation }) => {
           <View style={styles.menuItem}>
             <Text style={styles.menuIcon}>🎵</Text>
             <Text style={styles.menuLabel}>Background Music</Text>
-            <Switch
-              value={musicOn}
-              onValueChange={handleToggleMusic}
-              trackColor={{ false: '#333', true: COLORS.green }}
-              thumbColor={COLORS.white}
-            />
+            <Switch value={musicOn} onValueChange={handleToggleMusic} trackColor={{
+            false: '#333',
+            true: COLORS.green
+          }} thumbColor={COLORS.white} />
           </View>
           <View style={[styles.menuItem, styles.menuItemLast]}>
             <Text style={styles.menuIcon}>🔊</Text>
             <Text style={styles.menuLabel}>Sound Effects & Haptics</Text>
-            <Switch
-              value={sfxOn}
-              onValueChange={handleToggleSfx}
-              trackColor={{ false: '#333', true: COLORS.green }}
-              thumbColor={COLORS.white}
-            />
+            <Switch value={sfxOn} onValueChange={handleToggleSfx} trackColor={{
+            false: '#333',
+            true: COLORS.green
+          }} thumbColor={COLORS.white} />
           </View>
         </View>
 
         {/* Menu */}
         <View style={styles.menuSection}>
-          {MENU_ITEMS.map((item, idx) => (
-            <TouchableOpacity
-              key={item.id}
-              style={[styles.menuItem, idx === MENU_ITEMS.length - 1 && styles.menuItemLast]}
-              onPress={() => handleMenuPress(item)}
-            >
+          {MENU_ITEMS.map((item, idx) => <TouchableOpacity key={item.id} style={[styles.menuItem, idx === MENU_ITEMS.length - 1 && styles.menuItemLast]} onPress={() => {
+          playSound("button_click");
+          return handleMenuPress(item);
+        }}>
               <Text style={styles.menuIcon}>{item.icon}</Text>
               <Text style={styles.menuLabel}>{item.label}</Text>
               <Text style={styles.menuArrow}>›</Text>
-            </TouchableOpacity>
-          ))}
+            </TouchableOpacity>)}
         </View>
 
         {/* Logout */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+        <TouchableOpacity style={styles.logoutBtn} onPress={(...args) => {
+        playSound("button_click");
+        return handleLogout(...args);
+      }}>
           <Text style={styles.logoutText}>🚪 Logout</Text>
         </TouchableOpacity>
 
         {/* Version */}
         <Text style={styles.version}>LudoCash v1.0.0 • 18+ Real Money Gaming</Text>
 
-        <View style={{ height: 30 }} />
+        <View style={{
+        height: 30
+      }} />
       </ScrollView>
-    </LinearGradient>
-  );
+    </LinearGradient>;
 };
-
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: { padding: SPACING.md, paddingTop: SPACING.lg + 4 },
-  headerTitle: { color: COLORS.gold, fontSize: 16, fontWeight: '900' },
+  container: {
+    flex: 1
+  },
+  header: {
+    padding: SPACING.md,
+    paddingTop: SPACING.lg + 4
+  },
+  headerTitle: {
+    color: COLORS.gold,
+    fontSize: 16,
+    fontWeight: '900'
+  },
   profileSection: {
     alignItems: 'center',
     paddingVertical: SPACING.lg,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.05)',
-    paddingBottom: SPACING.xl,
+    paddingBottom: SPACING.xl
   },
-  avatarContainer: { position: 'relative', marginBottom: SPACING.md },
+  avatarContainer: {
+    position: 'relative',
+    marginBottom: SPACING.md
+  },
   avatar: {
     width: 88,
     height: 88,
@@ -188,8 +269,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 2,
     ...SHADOWS.gold,
+    overflow: 'hidden'
   },
-  avatarText: { fontSize: 28, fontWeight: '900', color: COLORS.background },
+  avatarImage: {
+    width: '100%',
+    height: '100%'
+  },
+  avatarText: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: COLORS.background
+  },
   avatarGlow: {
     position: 'absolute',
     width: 104,
@@ -197,10 +287,36 @@ const styles = StyleSheet.create({
     borderRadius: 52,
     backgroundColor: 'rgba(255,255,255,0.1)',
     top: -8,
-    left: -8,
+    left: -8
   },
-  displayName: { color: COLORS.white, fontSize: 16, fontWeight: '800', marginBottom: 4 },
-  displayEmail: { color: COLORS.textMuted, fontSize: 10, marginBottom: SPACING.md },
+  editBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: COLORS.surface,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 3,
+    borderWidth: 2,
+    borderColor: COLORS.background
+  },
+  editBadgeText: {
+    fontSize: 12
+  },
+  displayName: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 4
+  },
+  displayEmail: {
+    color: COLORS.textMuted,
+    fontSize: 10,
+    marginBottom: SPACING.md
+  },
   walletMini: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -208,18 +324,25 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.sm + 2,
-    borderRadius: RADIUS.full,
-    ...SHADOWS.medium,
+    borderRadius: RADIUS.round,
+    ...SHADOWS.medium
   },
-  walletMiniLabel: { color: COLORS.textSecondary, fontSize: 10 },
-  walletMiniAmount: { color: COLORS.gold, fontWeight: '900', fontSize: 12 },
+  walletMiniLabel: {
+    color: COLORS.textSecondary,
+    fontSize: 10
+  },
+  walletMiniAmount: {
+    color: COLORS.gold,
+    fontWeight: '900',
+    fontSize: 12
+  },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     padding: SPACING.md,
     gap: SPACING.sm,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    borderBottomColor: 'rgba(255,255,255,0.05)'
   },
   statCard: {
     flex: 1,
@@ -229,17 +352,26 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     alignItems: 'center',
     gap: 4,
-    ...SHADOWS.medium,
+    ...SHADOWS.medium
   },
-  statIcon: { fontSize: 16 },
-  statValue: { color: COLORS.white, fontSize: 15, fontWeight: '900' },
-  statLabel: { color: COLORS.textMuted, fontSize: 9 },
+  statIcon: {
+    fontSize: 16
+  },
+  statValue: {
+    color: COLORS.white,
+    fontSize: 15,
+    fontWeight: '900'
+  },
+  statLabel: {
+    color: COLORS.textMuted,
+    fontSize: 9
+  },
   menuSection: {
     margin: SPACING.md,
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.lg,
     overflow: 'hidden',
-    ...SHADOWS.medium,
+    ...SHADOWS.medium
   },
   menuItem: {
     flexDirection: 'row',
@@ -247,12 +379,26 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
     padding: SPACING.md,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: 'rgba(255,255,255,0.06)'
   },
-  menuItemLast: { borderBottomWidth: 0 },
-  menuIcon: { fontSize: 14, width: 26 },
-  menuLabel: { flex: 1, color: COLORS.white, fontSize: 11, fontWeight: '600' },
-  menuArrow: { color: COLORS.textMuted, fontSize: 16, fontWeight: '300' },
+  menuItemLast: {
+    borderBottomWidth: 0
+  },
+  menuIcon: {
+    fontSize: 14,
+    width: 26
+  },
+  menuLabel: {
+    flex: 1,
+    color: COLORS.white,
+    fontSize: 11,
+    fontWeight: '600'
+  },
+  menuArrow: {
+    color: COLORS.textMuted,
+    fontSize: 16,
+    fontWeight: '300'
+  },
   logoutBtn: {
     marginHorizontal: SPACING.md,
     padding: SPACING.md,
@@ -261,15 +407,67 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: 'rgba(255,68,68,0.4)',
     backgroundColor: 'rgba(255,68,68,0.08)',
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.md
   },
-  logoutText: { color: COLORS.error, fontWeight: '700', fontSize: 12 },
+  logoutText: {
+    color: COLORS.error,
+    fontWeight: '700',
+    fontSize: 12
+  },
   version: {
     textAlign: 'center',
     color: COLORS.textMuted,
     fontSize: 9,
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.sm
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  modalContent: {
+    width: '85%',
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    alignItems: 'center'
+  },
+  modalTitle: {
+    color: COLORS.white,
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: SPACING.lg
+  },
+  avatarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: SPACING.md
+  },
+  avatarOption: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: COLORS.gold,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.2)'
+  },
+  avatarImageOption: {
+    width: '100%',
+    height: '100%'
+  },
+  closeModalBtn: {
+    marginTop: SPACING.xl,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.xl,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: RADIUS.round
+  },
+  closeModalText: {
+    color: COLORS.white,
+    fontWeight: '600'
+  }
 });
-
 export default ProfileScreen;

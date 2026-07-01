@@ -25,10 +25,10 @@ export const COLORS = {
 export const GRADIENTS = {
   primary: ['#00B4DB', '#0083B0'], // Modern blue gradient
   secondary: ['#8E2DE2', '#4A00E0'], // Purple gradient
-  background: ['#0F1E3D', '#1A2A4D'], // Deep blue gradient
+  background: ['#1A2B56', '#224888'], // Ludo King deep blue gradient
   gold: ['#FFD700', '#FFA000'], // Bright gold gradient
   darkCard: ['#1A2A4D', '#0F1E3D'],
-  backgroundSplash: ['#1F004D', '#0A001A'], // Rich deep purple for Splash
+  backgroundSplash: ['#1A2B56', '#224888'], // Now perfectly matches the main app background!
   goldButton: ['#FFD700', '#FFA000'],
 };
 
@@ -100,7 +100,7 @@ export const RADIUS = {
   md: 12,
   lg: 16,
   xl: 24,
-  round: 9999,
+  round: 100,
 };
 
 export const SCREEN = {
@@ -109,8 +109,8 @@ export const SCREEN = {
 };
 
 export const BOARD = {
-  size: width * 0.95,
-  cellSize: (width * 0.95) / 15,
+  size: width * 0.90,
+  cellSize: (width * 0.90) / 15,
 };
 
 export const PLAYER_COLORS = {

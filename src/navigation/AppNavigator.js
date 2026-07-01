@@ -19,6 +19,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import ComputerGameScreen from '../screens/ComputerGameScreen';
 import TermsScreen from '../screens/TermsScreen';
 import PrivacyScreen from '../screens/PrivacyScreen';
+import ReferralScreen from '../screens/ReferralScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -30,6 +31,7 @@ const TabIcon = ({ name, focused }) => {
     Home: focused ? 'home' : 'home-outline',
     Wallet: focused ? 'wallet' : 'wallet-outline',
     Leaderboard: focused ? 'trophy' : 'trophy-outline',
+    Referral: focused ? 'gift' : 'gift-outline',
     Profile: focused ? 'person' : 'person-outline',
   };
 
@@ -69,6 +71,11 @@ const MainTabs = () => (
       options={{ tabBarIcon: ({ focused }) => <TabIcon name="Leaderboard" focused={focused} /> }}
     />
     <Tab.Screen
+      name="Referral"
+      component={ReferralScreen}
+      options={{ tabBarIcon: ({ focused }) => <TabIcon name="Referral" focused={focused} /> }}
+    />
+    <Tab.Screen
       name="Profile"
       component={ProfileScreen}
       options={{ tabBarIcon: ({ focused }) => <TabIcon name="Profile" focused={focused} /> }}
@@ -106,6 +113,7 @@ const AppNavigator = () => {
         />
         <Stack.Screen name="Terms" component={TermsScreen} options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="Privacy" component={PrivacyScreen} options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="Referral" component={ReferralScreen} options={{ animation: 'slide_from_right' }} />
         <Stack.Screen
           name="Result"
           component={ResultScreen}

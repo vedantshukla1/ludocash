@@ -27,27 +27,59 @@ router.post(
   validate,
   async (req, res) => {
     try {
-      const { name, email, password } = req.body;
+      const { name, email, password, referralCode } = req.body;
 
       const existing = await User.findOne({ email: email.toLowerCase() });
       if (existing) return res.status(400).json({ error: 'Email already registered' });
+
+      // Generate a unique referral code for the new user
+      const crypto = require('crypto');
+      const newReferralCode = crypto.randomBytes(3).toString('hex').toUpperCase() + Math.floor(10 + Math.random() * 90);
+
+      let referrer = null;
+      let initialBonus = WELCOME_BONUS;
+
+      if (referralCode) {
+        referrer = await User.findOne({ referralCode: referralCode.toUpperCase() });
+        if (referrer) {
+          initialBonus += 50; // Extra Rs 50 for the new user using a referral
+        }
+      }
 
       const hashed = await bcrypt.hash(password, 12);
       const user = await User.create({
         name,
         email: email.toLowerCase(),
         password: hashed,
-        wallet: { balance: WELCOME_BONUS, withdrawable: 0, bonus: WELCOME_BONUS },
+        referralCode: newReferralCode,
+        referredBy: referrer ? referrer._id : undefined,
+        wallet: { balance: initialBonus, withdrawable: 0, bonus: initialBonus },
       });
 
       const Transaction = require('../models/Transaction');
       await Transaction.create({
         userId: user._id,
         type: 'bonus',
-        amount: WELCOME_BONUS,
+        amount: initialBonus,
         status: 'completed',
-        meta: { reason: 'welcome_bonus' },
+        meta: { reason: referrer ? 'welcome_bonus_with_referral' : 'welcome_bonus' },
       });
+
+      // Give referrer their bonus
+      if (referrer) {
+        referrer.wallet.bonus += 50;
+        referrer.wallet.balance += 50;
+        referrer.referralsCount += 1;
+        await referrer.save();
+
+        await Transaction.create({
+          userId: referrer._id,
+          type: 'bonus',
+          amount: 50,
+          status: 'completed',
+          meta: { reason: 'referral_bonus', referredUserId: user._id },
+        });
+      }
 
       const fresh = await User.findById(user._id);
       await issueAuthResponse(fresh, res);

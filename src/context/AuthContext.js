@@ -20,15 +20,21 @@ export const AuthProvider = ({ children }) => {
 
         if (userData && accessToken) {
           setUser(JSON.parse(userData));
-          // Silently refresh user profile
-          try {
-            const { data } = await authAPI.me();
-            const fresh = data.user;
-            setUser(fresh);
-            await AsyncStorage.setItem('user', JSON.stringify(fresh));
-          } catch (_) {
-            // Token may be expired — keep cached user, interceptor handles refresh
-          }
+          // Silently refresh user profile — don't block initialization on this
+          authAPI.me()
+            .then(({ data }) => {
+              const parsedUser = JSON.parse(userData);
+              const fresh = { 
+                ...parsedUser, 
+                ...data.user,
+                avatar: data.user.avatar || parsedUser.avatar 
+              };
+              setUser(fresh);
+              AsyncStorage.setItem('user', JSON.stringify(fresh));
+            })
+            .catch(() => {
+              // Token may be expired — keep cached user
+            });
         }
       } catch (err) {
         console.error('Bootstrap error:', err);
@@ -59,7 +65,11 @@ export const AuthProvider = ({ children }) => {
 
   // ─── Update user in state + storage ─────────────────────────────────────────
   const updateUser = useCallback(async (updatedUser) => {
-    const merged = { ...user, ...updatedUser };
+    const merged = { 
+      ...user, 
+      ...updatedUser,
+      avatar: updatedUser.avatar || user?.avatar
+    };
     setUser(merged);
     await AsyncStorage.setItem('user', JSON.stringify(merged));
   }, [user]);

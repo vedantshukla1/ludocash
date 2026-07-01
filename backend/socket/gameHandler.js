@@ -212,15 +212,28 @@ const autoRollAndMove = async (gameId) => {
 
   emitToGame(gameId, 'dice_roll_start', { color });
 
+  // 15% chance for bot to send an emoji before rolling
+  const player = active.game.players.find(p => p.color === color);
+  if (player && player.isBot && Math.random() < 0.15) {
+    const emojis = ['😂', '😤', '🔥', '👏', '😱'];
+    const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+    emitToGame(gameId, 'receive_emoji', {
+      userId: player.userId.toString(),
+      emoji: randomEmoji,
+    });
+  }
+
   setTimeout(async () => {
     const current = activeGames.get(gameId);
     if (!current || current.gameState.currentTurn !== color) return;
 
-    const isDestinedWinner = current.game.isBotMatch && current.game.destinedWinnerColor
-      ? (color === current.game.destinedWinnerColor)
-      : null;
+    const isBotMatch = current.game.isBotMatch || false;
+    const botDestinedToWin = isBotMatch && current.game.destinedWinnerColor
+      ? current.game.players.find(p => p.color === current.game.destinedWinnerColor)?.isBot === true
+      : false;
+    const isRollerBot = true; // autoRollAndMove is always called for bots
 
-    const dice = rollDice(isDestinedWinner, current.gameState);
+    const dice = rollDice(isBotMatch, isRollerBot, botDestinedToWin, current.gameState);
     current.gameState.diceValue = dice;
 
     const movable = getMovablePieces(current.gameState, color, dice);
@@ -234,12 +247,15 @@ const autoRollAndMove = async (gameId) => {
 
     if (movable.length === 0) {
       const extraTurn = dice === 6;
-      setTimeout(() => advanceTurn(gameId, extraTurn, 'no_move'), 400);
+      setTimeout(() => advanceTurn(gameId, extraTurn, 'no_move'), 1000); // Also delay no-move turn passing
       return;
     }
 
-    const pieceId = chooseBestAutoMove(current.gameState, color, dice, movable);
-    await applyMove(gameId, color, pieceId, true);
+    // Delay the bot's actual piece movement so the frontend dice animation can finish playing
+    setTimeout(async () => {
+      const pieceId = chooseBestAutoMove(current.gameState, color, dice, movable);
+      await applyMove(gameId, color, pieceId, true);
+    }, 1000);
   }, 400);
 };
 
@@ -293,14 +309,20 @@ const applyMove = async (gameId, color, pieceId, autoMove = false) => {
     emitToGame(gameId, 'piece_home', { color, pieceId });
   }
 
+  const animationDelay = (dice * 40) + 200 + (killed ? 400 : 0);
+
   if (allPiecesHome(gameState, color)) {
     await saveGameState(gameId);
-    await endGame(gameId, color);
+    setTimeout(async () => {
+      await endGame(gameId, color);
+    }, animationDelay);
     return;
   }
 
   await saveGameState(gameId);
-  advanceTurn(gameId, extraTurn, killed ? 'kill' : moveResult.reachedHome ? 'home' : dice === 6 ? 'six' : '');
+  setTimeout(() => {
+    advanceTurn(gameId, extraTurn, killed ? 'kill' : moveResult.reachedHome ? 'home' : dice === 6 ? 'six' : '');
+  }, animationDelay);
 };
 
 const startTurnTimer = (gameId) => {
@@ -319,20 +341,29 @@ const startTurnTimer = (gameId) => {
     const current = activeGames.get(gameId);
     if (!current) return;
 
-    if (!isBotTurn) {
+    // Re-check isBotTurn at fire time to avoid stale closure
+    const currentColor = current.gameState.currentTurn;
+    const currentPlayerNow = current.game.players.find(p => p.color === currentColor);
+    const isBotNow = currentPlayerNow?.isBot || false;
+
+    if (!isBotNow) {
       current.timeouts = current.timeouts || {};
-      current.timeouts[color] = (current.timeouts[color] || 0) + 1;
+      current.timeouts[currentColor] = (current.timeouts[currentColor] || 0) + 1;
 
-      emitToGame(gameId, 'turn_timeout', { color, timeoutCount: current.timeouts[color] });
+      emitToGame(gameId, 'turn_timeout', { color: currentColor, timeoutCount: current.timeouts[currentColor] });
 
-      if (current.timeouts[color] >= 3) {
-        await handleDisqualification(gameId, color);
+      if (current.timeouts[currentColor] >= 3) {
+        await handleDisqualification(gameId, currentColor);
         return;
       }
     }
 
     if (!current.gameState.diceRolled) {
-      await autoRollAndMove(gameId);
+      if (isBotNow) {
+        await autoRollAndMove(gameId);
+      } else {
+        advanceTurn(gameId, false, 'timeout');
+      }
     } else {
       const movable = getMovablePieces(
         current.gameState,
@@ -340,13 +371,17 @@ const startTurnTimer = (gameId) => {
         current.gameState.diceValue,
       );
       if (movable.length > 0) {
-        const bestPieceId = chooseBestAutoMove(
-          current.gameState,
-          current.gameState.currentTurn,
-          current.gameState.diceValue,
-          movable
-        );
-        await applyMove(gameId, current.gameState.currentTurn, bestPieceId, true);
+        if (isBotNow) {
+          const bestPieceId = chooseBestAutoMove(
+            current.gameState,
+            current.gameState.currentTurn,
+            current.gameState.diceValue,
+            movable
+          );
+          await applyMove(gameId, current.gameState.currentTurn, bestPieceId, true);
+        } else {
+          advanceTurn(gameId, false, 'timeout');
+        }
       } else {
         advanceTurn(gameId, current.gameState.diceValue === 6, 'timeout');
       }
@@ -382,11 +417,14 @@ const handleRollDice = async (socket, { gameId }) => {
     const current = activeGames.get(gameId);
     if (!current || current.gameState.currentTurn !== color) return;
 
-    const isDestinedWinner = current.game.isBotMatch && current.game.destinedWinnerColor
-      ? (color === current.game.destinedWinnerColor)
-      : null;
+    const isBotMatch = current.game.isBotMatch || false;
+    const botDestinedToWin = isBotMatch && current.game.destinedWinnerColor
+      ? current.game.players.find(p => p.color === current.game.destinedWinnerColor)?.isBot === true
+      : false;
+    const rollerPlayer = current.game.players.find(p => p.color === color);
+    const isRollerBot = rollerPlayer?.isBot || false;
 
-    const dice = rollDice(isDestinedWinner, current.gameState);
+    const dice = rollDice(isBotMatch, isRollerBot, botDestinedToWin, current.gameState);
     current.gameState.diceValue = dice;
 
     if (dice === 6) {
@@ -396,7 +434,8 @@ const handleRollDice = async (socket, { gameId }) => {
         current.gameState.diceRolled = false;
         current.gameState.diceValue = null;
         emitToGame(gameId, 'dice_result', { color, dice, movablePieces: [], skipped: true });
-        return advanceTurn(gameId, false, 'three_sixes');
+        setTimeout(() => advanceTurn(gameId, false, 'three_sixes'), 1000);
+        return;
       }
     } else {
       current.gameState.consecutiveSixes = 0;
@@ -414,7 +453,7 @@ const handleRollDice = async (socket, { gameId }) => {
     await saveGameState(gameId);
 
     if (movable.length === 0) {
-      setTimeout(() => advanceTurn(gameId, dice === 6, 'no_move'), 400);
+      setTimeout(() => advanceTurn(gameId, dice === 6, 'no_move'), 1500);
     } else {
       startTurnTimer(gameId);
     }
@@ -463,7 +502,12 @@ const handleSendEmoji = (socket, { gameId, emoji }) => {
 
 const handleReconnectGame = async (socket, { gameId }) => {
   const active = activeGames.get(gameId);
-  if (!active) return;
+  if (!active) {
+    // Ghost game after server restart
+    const Game = require('../models/Game');
+    await Game.findByIdAndUpdate(gameId, { status: 'cancelled' });
+    return socket.emit('error_event', { message: 'Game session expired due to server restart.' });
+  }
 
   const player = active.game.players.find(
     (p) => p.userId.toString() === socket.userId,

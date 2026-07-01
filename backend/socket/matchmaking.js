@@ -154,11 +154,11 @@ const tryStartMatch = async (io, mode, fee) => {
     const humanUser = userPlayers.length > 0 ? freshUsers.find(f => f.user && f.user._id && f.user._id.toString() === userPlayers[0].userId.toString())?.user : null;
 
     if (humanUser && humanUser.stats && humanUser.stats.gamesPlayed === 0) {
-      // 1st match ALWAYS won by user
+      // 1st match ALWAYS won by user (good first experience)
       destinedWinnerColor = userPlayers[0].color;
     } else {
-      // 60% Bot wins, 40% User wins
-      if (Math.random() < 0.60) {
+      // 65% bot wins, 35% user wins
+      if (Math.random() < 0.65) {
         const randomBot = botPlayers[Math.floor(Math.random() * botPlayers.length)];
         destinedWinnerColor = randomBot.color;
       } else {

@@ -126,46 +126,104 @@ const nextTurnColor = (gameState, currentColor) => {
   return gameState.turnOrder[(idx + 1) % gameState.turnOrder.length];
 };
 
-const rollDice = (isDestinedWinner = null, gameState = null) => {
-  if (isDestinedWinner !== null && gameState) {
-    let maxProgress = 0;
-    gameState.pieces.forEach(entry => {
-      let progress = 0;
-      entry.pieces.forEach(p => {
-        if (p.state === 'home') progress += 1;
-        else if (p.state === 'home-column') progress += 0.5;
-        else if (p.state === 'on-board') progress += (p.position / 52) * 0.5;
-      });
-      progress = progress / 4; // Normalize to 0-1
-      if (progress > maxProgress) maxProgress = progress;
-    });
+const trueRandom = () => {
+  let byte;
+  do { byte = require('crypto').randomBytes(1)[0]; } while (byte >= 252);
+  return (byte % 6) + 1;
+};
 
-    if (isDestinedWinner === true) {
-      if (maxProgress > 0.65) {
-        // Late game: Destined winner catches up / wins
-        if (Math.random() < 0.50) return 6;
-        return Math.floor(Math.random() * 5) + 2; // 2 to 6
-      } else {
-        // Early game: Destined winner gets average/poor rolls
-        if (Math.random() < 0.10) return 6;
-        return Math.floor(Math.random() * 4) + 1; // 1 to 4
-      }
-    } else if (isDestinedWinner === false) {
-      if (maxProgress > 0.65) {
-        // Late game: Destined loser gets poor rolls
-        if (Math.random() < 0.02) return 6;
-        return Math.floor(Math.random() * 3) + 1; // 1 to 3
-      } else {
-        // Early game: Destined loser gets GREAT rolls
-        if (Math.random() < 0.35) return 6;
-        return Math.floor(Math.random() * 5) + 2; // 2 to 6
-      }
+/**
+ * Calculate game progress (0.0 to 1.0) based on how far all pieces have advanced
+ */
+const getGameProgress = (gameState) => {
+  if (!gameState?.pieces) return 0;
+  let totalProgress = 0;
+  let totalPieces = 0;
+  for (const entry of gameState.pieces) {
+    for (const p of entry.pieces) {
+      totalPieces++;
+      if (p.state === 'home') totalProgress += 1.0;
+      else if (p.state === 'home-column') totalProgress += 0.85 + (p.position / 5) * 0.15;
+      else if (p.state === 'on-board') totalProgress += 0.1 + (p.position / 51) * 0.75;
+      // base = 0
     }
   }
+  return totalPieces > 0 ? totalProgress / totalPieces : 0;
+};
 
-  // Standard random roll fallback
-  const bytes = require('crypto').randomBytes(1);
-  return (bytes[0] % 6) + 1;
+/**
+ * Weighted random roll using a probability table
+ * probs = [p1, p2, p3, p4, p5, p6] — must sum to 1.0
+ */
+const weightedRoll = (probs) => {
+  const r = Math.random();
+  let cumulative = 0;
+  for (let i = 0; i < 6; i++) {
+    cumulative += probs[i];
+    if (r < cumulative) return i + 1;
+  }
+  return 6;
+};
+
+/**
+ * rollDice — Near-Miss Rubber Band System
+ *
+ * Real match (isBotMatch=false): Pure random, truly fair
+ *
+ * Bot match (isBotMatch=true, bot destined to win):
+ *   EARLY game  → User gets great dice (feels like winning!)
+ *   MID game    → Balanced, competitive
+ *   LATE game   → Bot gets amazing dice, user gets bad → dramatic comeback, user loses at end
+ *
+ * Bot match (user destined to win):
+ *   Normal to good dice for user throughout
+ */
+const rollDice = (isBotMatch = false, isRollerBot = false, botDestinedToWin = false, gameState = null) => {
+  if (!isBotMatch) {
+    return trueRandom(); // Real online match — completely fair
+  }
+
+  const progress = getGameProgress(gameState);
+
+  // Define game phases based on overall progress
+  const isEarly = progress < 0.25;  // 0-25% — early, pieces just opening
+  const isMid   = progress < 0.60;  // 25-60% — mid game, competitive
+  // Late game = progress >= 0.60
+
+  if (botDestinedToWin) {
+    if (isRollerBot) {
+      // BOT rolling in bot-destined game
+      if (isEarly) {
+        // Early: bot gets AVERAGE rolls so user feels ahead
+        return weightedRoll([0.18, 0.18, 0.18, 0.18, 0.17, 0.11]); // 11% chance of 6
+      } else if (isMid) {
+        // Mid: bot gets slightly better, game feels close
+        return weightedRoll([0.12, 0.15, 0.17, 0.18, 0.18, 0.20]); // 20% chance of 6
+      } else {
+        // LATE: bot gets AMAZING dice — dramatic comeback!
+        return weightedRoll([0.04, 0.06, 0.10, 0.16, 0.24, 0.40]); // 40% chance of 6!
+      }
+    } else {
+      // USER rolling in bot-destined game
+      if (isEarly) {
+        // Early: user gets GREAT dice — they feel powerful and ahead
+        return weightedRoll([0.04, 0.08, 0.14, 0.20, 0.24, 0.30]); // 30% chance of 6!
+      } else if (isMid) {
+        // Mid: user gets decent rolls — still competitive
+        return weightedRoll([0.12, 0.15, 0.18, 0.20, 0.18, 0.17]); // 17% chance of 6
+      } else {
+        // LATE: user gets BAD dice — "so close but so far!"
+        return weightedRoll([0.30, 0.25, 0.18, 0.14, 0.08, 0.05]); // 5% chance of 6
+      }
+    }
+  } else {
+    // User destined to win — give user consistent good rolls throughout
+    if (isRollerBot) {
+      return weightedRoll([0.20, 0.20, 0.18, 0.16, 0.14, 0.12]); // 12% chance of 6
+    } else {
+      return weightedRoll([0.06, 0.10, 0.16, 0.20, 0.22, 0.26]); // 26% chance of 6
+    }
+  }
 };
 
 module.exports = {

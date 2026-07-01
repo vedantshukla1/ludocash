@@ -36,6 +36,9 @@ const userSchema = new mongoose.Schema(
     isBlocked: { type: Boolean, default: false },
     dailyBonusLastClaimed: { type: Date },
     refreshToken: { type: String },
+    referralCode: { type: String, unique: true, sparse: true },
+    referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    referralsCount: { type: Number, default: 0 },
   },
   { timestamps: true },
 );

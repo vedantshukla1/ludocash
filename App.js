@@ -7,10 +7,13 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { preloadSounds, startMusic } from './src/utils/sounds';
 import CustomAlert, { CustomAlertManager } from './src/components/CustomAlert';
 
+import SplashScreen from 'react-native-splash-screen';
+
 const App = () => {
   useEffect(() => {
     preloadSounds();
     startMusic();
+    SplashScreen.hide(); // Hide native splash screen immediately so JS splash screen can take over
   }, []);
 
   return (

@@ -7,54 +7,47 @@ import Sound from 'react-native-sound';
 
 Sound.setCategory('Ambient');
 
+import { NativeModules, Vibration } from 'react-native';
+const { SoundPoolManager } = NativeModules;
+
 let musicEnabled = true;
 let sfxEnabled = true;
 
 let bgMusic = null;
 
-// Preloaded sound instances
-const sounds = {};
-
-// Using remote URLs since local mp3 assets are not bundled
 const SOUND_FILES = {
-  dice: 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_29fb6bd126.mp3?filename=dice-roll-105574.mp3',
-  move: 'https://cdn.pixabay.com/download/audio/2021/08/04/audio_0625c1539c.mp3?filename=wooden-block-click-1-105820.mp3',
-  kill: 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_6506307ec3.mp3?filename=punch-140236.mp3',
-  home: 'https://cdn.pixabay.com/download/audio/2021/08/09/audio_228c460773.mp3?filename=success-1-6297.mp3',
-  win: 'https://cdn.pixabay.com/download/audio/2021/08/04/audio_12b0c7443c.mp3?filename=success-trumpet-8717.mp3',
-  lose: 'https://cdn.pixabay.com/download/audio/2021/08/04/audio_c6ccf3232f.mp3?filename=negative_beeps-6008.mp3',
-  click: 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8b1bb7ec7.mp3?filename=click-button-140881.mp3',
-  coin: 'https://cdn.pixabay.com/download/audio/2021/08/04/audio_34d193eb70.mp3?filename=coin-drop-39914.mp3',
-  countdown: 'https://cdn.pixabay.com/download/audio/2022/03/24/audio_0b02993b4e.mp3?filename=countdown-154942.mp3',
   bg_music: 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3?filename=stranger-things-124008.mp3'
 };
 
-/**
- * Load all SFX into memory
- */
 export const preloadSounds = () => {
-  Object.entries(SOUND_FILES).forEach(([key, file]) => {
-    if (key === 'bg_music') return;
-    sounds[key] = new Sound(file, null, (err) => {
-      if (err) {
-        console.log(`Sound load error [${key}]:`, err);
-      }
-    });
-  });
+  // SoundPoolManager preloads its own raw files automatically on init!
+  // We only need to preload react-native-sound if we want to use it
+};
+
+export const playSound = (name, options = {}) => {
+  if (!sfxEnabled) return;
+  
+  if (SoundPoolManager) {
+    let pitchVariation = 0;
+    if (options.randomizePitch) {
+      // random pitch between -3% and +3%
+      pitchVariation = (Math.random() * 6) - 3;
+    }
+    
+    // The dice roll sound has a built-in 1 second stop in JS if we were using it, 
+    // but with raw files we can let the raw file play out fully.
+    SoundPoolManager.playSound(name, pitchVariation);
+  } else {
+    console.log(`SoundPoolManager missing. Cannot play: ${name}`);
+  }
 };
 
 /**
- * Play a named sound effect
+ * Play haptic vibration (obeys SFX toggle)
  */
-export const playSound = (name) => {
+export const playVibration = (pattern) => {
   if (!sfxEnabled) return;
-  const sound = sounds[name];
-  if (!sound) return;
-  sound.stop(() => {
-    sound.play((success) => {
-      if (!success) console.log(`Sound play failed: ${name}`);
-    });
-  });
+  Vibration.vibrate(pattern);
 };
 
 /**
@@ -69,11 +62,15 @@ export const startMusic = () => {
   bgMusic = new Sound(SOUND_FILES.bg_music, null, (err) => {
     if (err) {
       console.log('Music load error:', err);
+      bgMusic = null; // Reset so the user can try tapping the button again to reload it!
       return;
     }
     bgMusic.setNumberOfLoops(-1); // infinite loop
-    bgMusic.setVolume(0.4);
-    bgMusic.play();
+    bgMusic.setVolume(0.2); // Lower BG music so SFX (like taps) punch through!
+    // Only play if the user hasn't toggled it off while it was loading!
+    if (musicEnabled) {
+      bgMusic.play();
+    }
   });
 };
 
@@ -81,7 +78,11 @@ export const startMusic = () => {
  * Stop / pause background music
  */
 export const stopMusic = () => {
-  if (bgMusic) bgMusic.pause();
+  if (bgMusic) {
+    bgMusic.stop(() => {
+      // safely stopped
+    });
+  }
 };
 
 /**
@@ -116,9 +117,13 @@ export const releaseSounds = () => {
   if (bgMusic) bgMusic.release();
 };
 
+// Automatically preload sounds when this module is evaluated (handles Fast Refresh)
+preloadSounds();
+
 export default {
   preloadSounds,
   playSound,
+  playVibration,
   startMusic,
   stopMusic,
   toggleMusic,

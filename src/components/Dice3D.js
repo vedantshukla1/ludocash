@@ -1,202 +1,257 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { View, StyleSheet, Animated, Easing, TouchableOpacity } from 'react-native';
-import { playSound } from '../utils/sounds';
-
-const Dice3D = ({ value = 1, rolling = false, onRollComplete, onPress, disabled, size = 60 }) => {
-  const rotateX = useRef(new Animated.Value(0)).current;
-  const rotateY = useRef(new Animated.Value(0)).current;
-  const [displayValue, setDisplayValue] = useState(value);
-  const latestValue = useRef(value);
+import { playSound, playVibration } from '../utils/sounds';
+const Dice3D = ({
+  value = 1,
+  rolling = false,
+  onRollComplete,
+  onPress,
+  disabled,
+  size = 60
+}) => {
+  const animValue = useRef(new Animated.Value(0)).current;
+  const [displayValue, setDisplayValue] = useState(value || 1);
+  const latestValue = useRef(value || 1);
   const isAnimating = useRef(false);
+  const stopRequested = useRef(false);
+  const tossFinished = useRef(false);
+  const rollInterval = useRef(null);
 
   useEffect(() => {
-    latestValue.current = value;
-  }, [value]);
+    if (value !== null && value !== undefined) {
+      latestValue.current = value;
+    }
+    
+    // Instantly set the display value when rolling stops to guarantee accuracy
+    if (!rolling) {
+      setDisplayValue(latestValue.current);
+    }
+  }, [value, rolling]);
+
+  const executeSlamDown = useCallback(() => {
+    if (rollInterval.current) {
+      clearInterval(rollInterval.current);
+      rollInterval.current = null;
+    }
+    setDisplayValue(latestValue.current);
+    playVibration(40); // Heavy thud on landing
+
+    Animated.sequence([
+      Animated.timing(animValue, {
+        toValue: 2,
+        duration: 150,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true
+      }),
+      Animated.timing(animValue, {
+        toValue: 2.5,
+        duration: 100,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true
+      }),
+      Animated.timing(animValue, {
+        toValue: 3,
+        duration: 100,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true
+      })
+    ]).start(() => {
+      isAnimating.current = false;
+      if (onRollComplete) {
+        onRollComplete(latestValue.current);
+      }
+    });
+  }, [animValue, onRollComplete]);
 
   useEffect(() => {
-    if (rolling) {
+    return () => {
+      if (rollInterval.current) clearInterval(rollInterval.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (rolling && !isAnimating.current) {
       isAnimating.current = true;
-      // Play sound
+      stopRequested.current = false;
+      tossFinished.current = false;
+      animValue.setValue(0);
       playSound('dice');
 
-      // Animate roll
-      rotateX.setValue(0);
-      rotateY.setValue(0);
-      
-      Animated.sequence([
-        Animated.parallel([
-          Animated.timing(rotateX, {
-            toValue: 720,
-            duration: 600,
-            easing: Easing.in(Easing.quad),
-            useNativeDriver: true,
-          }),
-          Animated.timing(rotateY, {
-            toValue: 540,
-            duration: 600,
-            easing: Easing.in(Easing.quad),
-            useNativeDriver: true,
-          })
-        ]),
-        Animated.spring(rotateX, {
-          toValue: 720, // Spring back to a flat orientation visually
-          friction: 4,
-          tension: 20,
-          useNativeDriver: true,
-        })
-      ]).start(() => {
-        isAnimating.current = false;
-        setDisplayValue(latestValue.current);
-        if (onRollComplete) {
-          onRollComplete(latestValue.current);
+      if (rollInterval.current) clearInterval(rollInterval.current);
+      rollInterval.current = setInterval(() => {
+        setDisplayValue(Math.floor(Math.random() * 6) + 1);
+        playSound('move');
+        playVibration(15);
+      }, 100);
+
+      // Toss up
+      Animated.timing(animValue, {
+        toValue: 1,
+        duration: 350,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true
+      }).start(() => {
+        tossFinished.current = true;
+        if (stopRequested.current) {
+          executeSlamDown();
         }
       });
-
-      // While rolling, randomly change display value to simulate different faces passing by
-      let interval = setInterval(() => {
-        setDisplayValue(Math.floor(Math.random() * 6) + 1);
-      }, 100);
-      
-      setTimeout(() => {
-        clearInterval(interval);
-      }, 500);
-    } else {
-      if (!isAnimating.current) {
-        setDisplayValue(value);
+    } else if (!rolling && isAnimating.current) {
+      stopRequested.current = true;
+      if (tossFinished.current) {
+        executeSlamDown();
       }
     }
-  }, [rolling]);
-
-  const spinX = rotateX.interpolate({
-    inputRange: [0, 720],
-    outputRange: ['0deg', '720deg']
+  }, [rolling, executeSlamDown, animValue]);
+  const baseScale = size / 60;
+  const translateY = animValue.interpolate({
+    inputRange: [0, 1, 2, 2.5, 3],
+    outputRange: [0, -15, 0, -5, 0] // Kept within the box
   });
-
-  const spinY = rotateY.interpolate({
-    inputRange: [0, 540],
-    outputRange: ['0deg', '540deg']
+  const scaleAnim = animValue.interpolate({
+    inputRange: [0, 1, 2, 2.5, 3],
+    outputRange: [baseScale, baseScale * 1.25, baseScale, baseScale * 1.05, baseScale] // Expand slightly in air
   });
-
+  const spinZ = animValue.interpolate({
+    inputRange: [0, 0.2, 0.4, 0.6, 0.8, 1, 2, 3],
+    outputRange: ['0deg', '35deg', '-35deg', '35deg', '-35deg', '0deg', '0deg', '0deg'] // Wild shake in air, lock on descent
+  });
   const renderDots = () => {
-    const dots = [];
     const positions = {
-      tl: { top: 8, left: 8 },
-      tr: { top: 8, right: 8 },
-      ml: { top: 22, left: 8 },
-      mr: { top: 22, right: 8 },
-      bl: { bottom: 8, left: 8 },
-      br: { bottom: 8, right: 8 },
-      c:  { top: 22, left: 22 },
+      tl: {
+        top: 6,
+        left: 6
+      },
+      tr: {
+        top: 6,
+        right: 6
+      },
+      ml: {
+        top: 20.5,
+        left: 6
+      },
+      // Exactly centered vertically (51 internal height)
+      mr: {
+        top: 20.5,
+        right: 6
+      },
+      bl: {
+        bottom: 6,
+        left: 6
+      },
+      br: {
+        bottom: 6,
+        right: 6
+      },
+      c: {
+        top: 20.5,
+        left: 21.5
+      } // Exactly centered horizontally (53 internal width)
     };
-
-    const getDotsForValue = (val) => {
-      if (val === null || val === undefined) return [];
-      switch (val) {
-        case 1: return [positions.c];
-        case 2: return [positions.tl, positions.br];
-        case 3: return [positions.tl, positions.c, positions.br];
-        case 4: return [positions.tl, positions.tr, positions.bl, positions.br];
-        case 5: return [positions.tl, positions.tr, positions.c, positions.bl, positions.br];
-        case 6: return [positions.tl, positions.tr, positions.ml, positions.mr, positions.bl, positions.br];
-        default: return [positions.c];
+    const getDotsForValue = val => {
+      const v = val || 1; // Fallback to 1
+      switch (v) {
+        case 1:
+          return [positions.c];
+        case 2:
+          return [positions.tl, positions.br];
+        case 3:
+          return [positions.tl, positions.c, positions.br];
+        case 4:
+          return [positions.tl, positions.tr, positions.bl, positions.br];
+        case 5:
+          return [positions.tl, positions.tr, positions.c, positions.bl, positions.br];
+        case 6:
+          return [positions.tl, positions.tr, positions.ml, positions.mr, positions.bl, positions.br];
+        default:
+          return [positions.c];
       }
     };
-
-    const currentDots = getDotsForValue(displayValue);
-
-    return currentDots.map((pos, index) => (
-      <View key={index} style={[styles.dot, pos]} />
-    ));
+    const actualDisplayValue = rolling ? displayValue : (value !== null && value !== undefined ? value : (latestValue.current || 1));
+    const currentDots = getDotsForValue(actualDisplayValue);
+    return currentDots.map((pos, index) => <View key={index} style={[styles.dot, pos, actualDisplayValue === 1 && {
+      backgroundColor: '#E53935',
+      borderBottomColor: '#B71C1C'
+    } // Glossy red dot for 1!
+    ]} />);
   };
-
-  return (
-    <TouchableOpacity onPress={onPress} disabled={disabled || rolling} activeOpacity={0.8}>
-      <Animated.View style={[
-        styles.container,
-        {
-          transform: [
-            { scale: size / 60 },
-            { perspective: 800 },
-            { rotateX: spinX },
-            { rotateY: spinY }
-          ]
-        }
-      ]}>
-      <View style={styles.diceBase}>
-        {/* Top face illusion */}
-        <View style={styles.topIllusion} />
-        {/* Right face illusion */}
-        <View style={styles.rightIllusion} />
-        
-        {/* Dots container */}
-        <View style={styles.dotsContainer}>
+  return <TouchableOpacity onPress={onPress} disabled={disabled || rolling} activeOpacity={0.8}>
+      <Animated.View style={[styles.container, {
+      transform: [{
+        translateY
+      }, {
+        scale: scaleAnim
+      }, {
+        rotateZ: spinZ
+      }]
+    }]}>
+        <View style={styles.diceFace}>
+          {/* Subtle glossy glare over the dice */}
+          <View style={styles.diceGlare} />
           {renderDots()}
         </View>
-        </View>
       </Animated.View>
-    </TouchableOpacity>
-  );
+    </TouchableOpacity>;
 };
-
 const styles = StyleSheet.create({
   container: {
     width: 60,
     height: 60,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  diceFace: {
+    width: 56,
+    height: 56,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#FFFFFF',
+    borderLeftWidth: 1,
+    borderLeftColor: '#F5F5F5',
+    borderBottomWidth: 4,
+    borderBottomColor: '#D6D6D6',
+    // Smoother 3D edge
+    borderRightWidth: 2,
+    borderRightColor: '#E0E0E0',
     shadowColor: '#000',
-    shadowOffset: { width: 4, height: 6 },
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
-    elevation: 10,
+    shadowOffset: {
+      width: 0,
+      height: 6
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 8,
+    overflow: 'hidden' // to contain glare
   },
-  diceBase: {
-    width: 60,
-    height: 60,
-    backgroundColor: '#F5DEB3', // warm cream/beige wood color
-    borderRadius: 10,
-    borderLeftWidth: 3,
-    borderLeftColor: '#D2B48C', // 3D edge darker shade left
-    borderBottomWidth: 3,
-    borderBottomColor: '#C19A6B', // Bottom darker edge
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  topIllusion: {
+  diceGlare: {
     position: 'absolute',
     top: 0,
     left: 0,
-    right: 0,
-    height: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.4)', // slightly lighter
-  },
-  rightIllusion: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    width: 6,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)', // slightly darker
-  },
-  dotsContainer: {
-    flex: 1,
-    position: 'relative',
+    width: '150%',
+    height: '50%',
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    transform: [{
+      rotate: '-25deg'
+    }, {
+      translateY: -10
+    }],
+    zIndex: 1 // glare above background, below dots
   },
   dot: {
     position: 'absolute',
     width: 10,
+    // Smaller dots
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#2C1810', // dark brown
-    // Inner shadow simulation for depth (React Native doesn't have true inner shadow)
-    // We simulate it using borders
+    backgroundColor: '#1A1A1A',
+    // Softer black
     borderTopWidth: 1,
-    borderTopColor: '#1A0E09',
-    borderLeftWidth: 1,
-    borderLeftColor: '#1A0E09',
+    borderTopColor: '#000000',
+    // Simulates an indented dot hole
     borderBottomWidth: 1,
-    borderBottomColor: '#4A281A',
-    borderRightWidth: 1,
-    borderRightColor: '#4A281A',
+    borderBottomColor: '#444444',
+    zIndex: 2 // dots above glare
   }
 });
-
 export default Dice3D;

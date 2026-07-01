@@ -1,24 +1,22 @@
-import React, { useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import React, { useMemo, useEffect, useRef } from 'react';
+import { View, StyleSheet, Text, Animated } from 'react-native';
 import { BOARD, COLORS, PLAYER_COLORS } from '../utils/theme';
 import {
   MAIN_PATH_COORDS, HOME_COLUMN_COORDS, BASE_POSITIONS,
   SAFE_SQUARES, STAR_SQUARES, COLOR_START,
 } from '../utils/ludoEngine';
 import Piece3D from './Piece3D';
+import { playSound } from '../utils/sounds';
 
-const CELL = BOARD.cellSize;
-const SIZE = BOARD.size;
-
-// Authentic Ludo Colors
+// Vibrant Zupee-style Ludo Colors
 const CLASSIC_COLORS = {
-  red: '#E53935',
-  blue: '#1E88E5',
-  green: '#43A047',
-  yellow: '#FFB300',
-  boardBg: '#F5F2EB', // Cream paper texture background
-  border: '#D5CDBE',  // Cardboard style separator lines
-  safe: '#EAE6DB',    // Distinct safe square background
+  red: '#F44336',    // Bright Red
+  blue: '#2196F3',   // Bright Blue
+  green: '#4CAF50',  // Bright Green
+  yellow: '#FFEB3B', // Bright Yellow
+  boardBg: '#Fdfdfd', // Clean white background
+  border: '#E0E0E0',  // Soft separator lines
+  safe: '#F5F5F5',    // Distinct safe square background
 };
 
 // Home base quadrant positions [row, col]
@@ -28,6 +26,184 @@ const HOME_BASES = {
   green:  { row: 9, col: 9 },
   yellow: { row: 9, col: 0 },
 };
+
+const AnimatedPieceWrapper = ({ top, left, zIndex, children }) => {
+  const animTop = useRef(new Animated.Value(top)).current;
+  const animLeft = useRef(new Animated.Value(left)).current;
+  const animScale = useRef(new Animated.Value(1)).current;
+  const isFirstMount = useRef(true);
+
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+    
+    // Smooth hopping animation (physical 3D jump)
+    Animated.parallel([
+      Animated.timing(animTop, { toValue: top, useNativeDriver: false, duration: 100 }),
+      Animated.timing(animLeft, { toValue: left, useNativeDriver: false, duration: 100 }),
+      Animated.sequence([
+        Animated.timing(animScale, { toValue: 1.3, useNativeDriver: false, duration: 50 }),
+        Animated.timing(animScale, { toValue: 1, useNativeDriver: false, duration: 50 }),
+      ])
+    ]).start();
+  }, [top, left]);
+
+  return (
+    <Animated.View 
+      pointerEvents="box-none"
+      style={{ 
+        position: 'absolute', 
+        top: animTop, 
+        left: animLeft, 
+        zIndex,
+        transform: [{ scale: animScale }]
+      }}
+    >
+      {children}
+    </Animated.View>
+  );
+};
+
+const StaticGrid = React.memo(() => {
+  const renderCell = (row, col) => {
+    const key = `${row}_${col}`;
+    const absPos = MAIN_PATH_COORDS.findIndex(([r, c]) => r === row && c === col);
+
+    let isPathCell = absPos !== -1;
+    let isSafe = absPos !== -1 && SAFE_SQUARES.has(absPos);
+    let isStar = absPos !== -1 && STAR_SQUARES.has(absPos);
+
+    let bgColor = CLASSIC_COLORS.boardBg;
+
+    if (isPathCell) {
+      bgColor = '#FFFFFF';
+    }
+
+    // Color the starting cells for each color
+    for (const [color, start] of Object.entries(COLOR_START)) {
+      if (row === MAIN_PATH_COORDS[start]?.[0] && col === MAIN_PATH_COORDS[start]?.[1]) {
+        bgColor = CLASSIC_COLORS[color];
+        break;
+      }
+    }
+
+    // Home column coloring
+    for (const [color, coords] of Object.entries(HOME_COLUMN_COORDS)) {
+      for (const [r, c] of coords) {
+        if (r === row && c === col) {
+          bgColor = CLASSIC_COLORS[color];
+          isPathCell = true;
+          break;
+        }
+      }
+    }
+
+    // Safe squares get a distinct tint
+    if (isSafe && bgColor === '#FFFFFF') {
+      bgColor = CLASSIC_COLORS.safe;
+    }
+
+    // Don't render cells inside the 3x3 center or the 6x6 base quadrants to keep DOM light and clean
+    const isCenter3x3 = row >= 6 && row <= 8 && col >= 6 && col <= 8;
+    const isRedBase = row < 6 && col < 6;
+    const isBlueBase = row < 6 && col > 8;
+    const isGreenBase = row > 8 && col > 8;
+    const isYellowBase = row > 8 && col < 6;
+
+    if (isCenter3x3 || isRedBase || isBlueBase || isGreenBase || isYellowBase) {
+      bgColor = 'transparent';
+    }
+
+    return (
+      <View
+        key={key}
+        style={[
+          styles.cell,
+          { backgroundColor: bgColor, borderColor: CLASSIC_COLORS.border },
+          isSafe && styles.safeCell,
+        ]}
+      >
+        {isStar && <Text style={styles.star}>⭐</Text>}
+        {isSafe && !isStar && bgColor === CLASSIC_COLORS.safe && (
+          <View style={styles.shieldIcon}>
+            <Text style={{ fontSize: BOARD.cellSize * 0.4 }}>🛡️</Text>
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  return (
+    <>
+      {Array.from({ length: 15 }, (_, row) => (
+        <View key={row} style={styles.row}>
+          {Array.from({ length: 15 }, (_, col) => renderCell(row, col))}
+        </View>
+      ))}
+    </>
+  );
+});
+
+const StaticBases = React.memo(() => (
+  <>
+    {Object.entries(HOME_BASES).map(([color, config]) => (
+      <View
+        key={color}
+        style={[
+          styles.homeBaseOverlay,
+          {
+            top: config.row * BOARD.cellSize,
+            left: config.col * BOARD.cellSize,
+            width: BOARD.cellSize * 6,
+            height: BOARD.cellSize * 6,
+            backgroundColor: CLASSIC_COLORS[color],
+          },
+        ]}
+      >
+        {/* 4 bright spawn circles directly on the solid base */}
+        {BASE_POSITIONS[color].map(([r, c], i) => {
+          // Centered positions inside the 6x6 square
+          const spawnOffsets = [
+            { top: 1.2, left: 1.2 },
+            { top: 1.2, left: 3.6 },
+            { top: 3.6, left: 1.2 },
+            { top: 3.6, left: 3.6 },
+          ];
+          const relRow = spawnOffsets[i].top;
+          const relCol = spawnOffsets[i].left;
+          const circleSize = BOARD.cellSize * 1.2;
+          return (
+            <View
+              key={i}
+              style={[
+                styles.spawnCircle,
+                {
+                  top: relRow * BOARD.cellSize,
+                  left: relCol * BOARD.cellSize,
+                  width: circleSize,
+                  height: circleSize,
+                  borderRadius: circleSize / 2,
+                },
+              ]}
+            >
+              <View
+                style={{
+                  width: BOARD.cellSize * 0.5,
+                  height: BOARD.cellSize * 0.5,
+                  borderRadius: (BOARD.cellSize * 0.5) / 2,
+                  backgroundColor: CLASSIC_COLORS[color],
+                  opacity: 0.15,
+                }}
+              />
+            </View>
+          );
+        })}
+      </View>
+    ))}
+  </>
+));
 
 const LudoBoard = ({ gameState, players, myColor, movablePieces, onPiecePress }) => {
   // Build a lookup: absolutePos → list of {color, pieceId}
@@ -57,172 +233,27 @@ const LudoBoard = ({ gameState, players, myColor, movablePieces, onPiecePress })
   }, [gameState]);
 
   const isMovable = (color, pieceId) => {
-    return color === myColor && movablePieces.includes(pieceId);
-  };
-
-  const renderCell = (row, col) => {
-    const key = `${row}_${col}`;
-    const absPos = MAIN_PATH_COORDS.findIndex(([r, c]) => r === row && c === col);
-
-    let isPathCell = absPos !== -1;
-    let isSafe = absPos !== -1 && SAFE_SQUARES.has(absPos);
-    let isStar = absPos !== -1 && STAR_SQUARES.has(absPos);
-
-    let bgColor = CLASSIC_COLORS.boardBg;
-
-    if (isPathCell) {
-      bgColor = '#FFFFFF'; // Path cells are solid white
-    }
-
-    // Color the starting cells for each color
-    for (const [color, start] of Object.entries(COLOR_START)) {
-      if (row === MAIN_PATH_COORDS[start]?.[0] && col === MAIN_PATH_COORDS[start]?.[1]) {
-        bgColor = CLASSIC_COLORS[color];
-        break;
-      }
-    }
-
-    // Home column coloring
-    for (const [color, coords] of Object.entries(HOME_COLUMN_COORDS)) {
-      for (const [r, c] of coords) {
-        if (r === row && c === col) {
-          bgColor = CLASSIC_COLORS[color];
-          isPathCell = true;
-          break;
-        }
-      }
-    }
-
-    // Safe squares that are not the starting cells get a distinct texture/color
-    if (isSafe && bgColor === '#FFFFFF') {
-      bgColor = CLASSIC_COLORS.safe;
-    }
-
-    // Don't render cells inside the 3x3 center or the 6x6 base quadrants to keep DOM light and clean
-    const isCenter3x3 = row >= 6 && row <= 8 && col >= 6 && col <= 8;
-    const isRedBase = row < 6 && col < 6;
-    const isBlueBase = row < 6 && col > 8;
-    const isGreenBase = row > 8 && col > 8;
-    const isYellowBase = row > 8 && col < 6;
-
-    if (isCenter3x3 || isRedBase || isBlueBase || isGreenBase || isYellowBase) {
-      bgColor = 'transparent';
-    }
-
-    const piecesHere = piecePositions[`main_${absPos}`] || [];
-
-    return (
-      <View
-        key={key}
-        style={[
-          styles.cell,
-          { backgroundColor: bgColor, borderColor: CLASSIC_COLORS.border },
-          isSafe && styles.safeCell,
-        ]}
-      >
-        {isStar && <Text style={styles.star}>⭐</Text>}
-      </View>
-    );
+    if (!movablePieces || movablePieces.color !== color) return false;
+    const ids = (movablePieces.pieces || []).map(Number);
+    return ids.includes(Number(pieceId));
   };
 
   return (
     <View style={styles.boardWrapper}>
       {/* 15×15 grid */}
       <View style={styles.board}>
-        {Array.from({ length: 15 }, (_, row) => (
-          <View key={row} style={styles.row}>
-            {Array.from({ length: 15 }, (_, col) => renderCell(row, col))}
-          </View>
-        ))}
+        <StaticGrid />
 
         {/* Center Home Triangles (Classic diagonal partition) */}
         <View style={styles.centerHomeContainer}>
           <View style={styles.trianglesPattern} />
           <View style={styles.centerStarBox}>
-            <Text style={styles.centerStar}>⭐</Text>
+            <Text style={styles.centerStar}>👑</Text>
           </View>
         </View>
 
-        {/* Overlay base circles for each color */}
-        {Object.entries(HOME_BASES).map(([color, config]) => (
-          <View
-            key={color}
-            style={[
-              styles.homeBaseOverlay,
-              {
-                top: config.row * CELL,
-                left: config.col * CELL,
-                width: CELL * 6,
-                height: CELL * 6,
-                backgroundColor: CLASSIC_COLORS[color],
-                borderColor: CLASSIC_COLORS.border,
-              },
-            ]}
-          >
-            {/* White/cream centered panel */}
-            <View
-              style={{
-                position: 'absolute',
-                top: CELL * 0.8,
-                left: CELL * 0.8,
-                width: CELL * 4.4,
-                height: CELL * 4.4,
-                backgroundColor: '#FFFDF0',
-                borderRadius: 8,
-                borderWidth: 1.5,
-                borderColor: 'rgba(0,0,0,0.12)',
-              }}
-            />
-
-            {/* 4 spawn circles */}
-            {BASE_POSITIONS[color].map(([r, c], i) => {
-              // Perfect symmetric relative coordinates for centering in 6x6 base
-              const spawnOffsets = [
-                { top: 1.3, left: 1.3 },
-                { top: 1.3, left: 3.5 },
-                { top: 3.5, left: 1.3 },
-                { top: 3.5, left: 3.5 },
-              ];
-              const relRow = spawnOffsets[i].top;
-              const relCol = spawnOffsets[i].left;
-              const piecesAtBase = piecePositions[`base_${color}_${i}`] || [];
-              const circleSize = CELL * 1.2;
-              return (
-                <View
-                  key={i}
-                  style={[
-                    styles.spawnCircle,
-                    {
-                      top: relRow * CELL,
-                      left: relCol * CELL,
-                      width: circleSize,
-                      height: circleSize,
-                      borderRadius: circleSize / 2,
-                      borderColor: CLASSIC_COLORS[color],
-                      borderWidth: 2.5,
-                      backgroundColor: '#FFFDF0',
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.2,
-                      shadowRadius: 2.5,
-                      elevation: 3,
-                    },
-                  ]}
-                >
-                  <View
-                    style={{
-                      width: CELL * 0.38,
-                      height: CELL * 0.38,
-                      borderRadius: (CELL * 0.38) / 2,
-                      backgroundColor: CLASSIC_COLORS[color],
-                      opacity: 0.3,
-                    }}
-                  />
-                </View>
-              );
-            })}
-          </View>
-        ))}
+        {/* Solid Color Base Quadrants (Zupee Style) */}
+        <StaticBases />
 
         {/* Render all pieces in a flat overlay above stars, grids, and boundaries */}
         {Object.keys(piecePositions).map((posKey) => {
@@ -253,10 +284,10 @@ const LudoBoard = ({ gameState, players, myColor, movablePieces, onPiecePress })
             const pId = parseInt(parts[2], 10);
             const baseConfig = HOME_BASES[color];
             const spawnOffsets = [
-              { top: 1.3, left: 1.3 },
-              { top: 1.3, left: 3.5 },
-              { top: 3.5, left: 1.3 },
-              { top: 3.5, left: 3.5 },
+              { top: 1.2, left: 1.2 },
+              { top: 1.2, left: 3.6 },
+              { top: 3.6, left: 1.2 },
+              { top: 3.6, left: 3.6 },
             ];
             const offset = spawnOffsets[pId];
             r = baseConfig.row + offset.top;
@@ -288,49 +319,55 @@ const LudoBoard = ({ gameState, players, myColor, movablePieces, onPiecePress })
           // Render the pieces at this coordinate
           if (pieces.length === 1) {
             const p = pieces[0];
-            const size = isBase ? CELL * 0.72 : CELL * 0.68;
-            const centeredOffset = isBase ? (CELL * 1.2 - size) / 2 : (CELL - size) / 2;
-            const topOffset = isBase ? centeredOffset - CELL * 0.06 : centeredOffset - CELL * 0.04;
+            const size = isBase ? BOARD.cellSize * 0.72 : BOARD.cellSize * 0.68;
+            const centeredOffset = isBase ? (BOARD.cellSize * 1.2 - size) / 2 : (BOARD.cellSize - size) / 2;
+            const topOffset = isBase ? centeredOffset - BOARD.cellSize * 0.06 : centeredOffset - BOARD.cellSize * 0.04;
+            
             return (
-              <Piece3D
-                key={`${p.color}_${p.pieceId}`}
-                color={p.color}
-                pieceId={p.pieceId}
-                selected={isMovable(p.color, p.pieceId)}
-                onPress={() => onPiecePress(p.color, p.pieceId)}
-                size={size}
-                style={{
-                  position: 'absolute',
-                  top: r * CELL + topOffset,
-                  left: c * CELL + centeredOffset,
-                  zIndex: 200,
-                }}
-              />
+              <React.Fragment key={posKey}>
+                <AnimatedPieceWrapper 
+                  top={r * BOARD.cellSize + topOffset - 20} 
+                  left={c * BOARD.cellSize + centeredOffset - 20} 
+                  zIndex={200}
+                >
+                  <Piece3D
+                    color={p.color}
+                    pieceId={p.pieceId}
+                    selected={isMovable(p.color, p.pieceId)}
+                    onPress={() => onPiecePress(p.color, p.pieceId)}
+                    size={size}
+                  />
+                </AnimatedPieceWrapper>
+              </React.Fragment>
             );
           } else {
             // Stack multiple pieces in the same cell
-            return pieces.map((p, idx) => {
-              const offset = idx * CELL * 0.12;
-              const size = CELL * 0.48;
-              const cellWidth = isBase ? CELL * 1.2 : CELL;
-              const centeredOffset = (cellWidth - size) / 2;
-              return (
-                <Piece3D
-                  key={`${p.color}_${p.pieceId}`}
-                  color={p.color}
-                  pieceId={p.pieceId}
-                  selected={isMovable(p.color, p.pieceId)}
-                  onPress={() => onPiecePress(p.color, p.pieceId)}
-                  size={size}
-                  style={{
-                    position: 'absolute',
-                    top: r * CELL + centeredOffset + offset - (isBase ? CELL * 0.06 : CELL * 0.04),
-                    left: c * CELL + centeredOffset + offset,
-                    zIndex: 200 + idx,
-                  }}
-                />
-              );
-            });
+            return (
+              <React.Fragment key={posKey}>
+                {pieces.map((p, idx) => {
+                  const offset = idx * BOARD.cellSize * 0.12;
+                  const size = BOARD.cellSize * 0.48;
+                  const cellWidth = isBase ? BOARD.cellSize * 1.2 : BOARD.cellSize;
+                  const centeredOffset = (cellWidth - size) / 2;
+                  return (
+                    <AnimatedPieceWrapper 
+                      key={`${p.color}_${p.pieceId}`}
+                      top={r * BOARD.cellSize + centeredOffset + offset - (isBase ? BOARD.cellSize * 0.06 : BOARD.cellSize * 0.04) - 20}
+                      left={c * BOARD.cellSize + centeredOffset + offset - 20}
+                      zIndex={200 + idx}
+                    >
+                      <Piece3D
+                        color={p.color}
+                        pieceId={p.pieceId}
+                        selected={isMovable(p.color, p.pieceId)}
+                        onPress={() => onPiecePress(p.color, p.pieceId)}
+                        size={size}
+                      />
+                    </AnimatedPieceWrapper>
+                  );
+                })}
+              </React.Fragment>
+            );
           }
         })}
       </View>
@@ -340,59 +377,67 @@ const LudoBoard = ({ gameState, players, myColor, movablePieces, onPiecePress })
 
 const styles = StyleSheet.create({
   boardWrapper: {
-    width: SIZE + 12,
-    height: SIZE + 12,
+    width: BOARD.size + 12,
+    height: BOARD.size + 12,
     borderRadius: 12,
     overflow: 'hidden',
     borderWidth: 6,
-    borderColor: '#8D6E63', // Premium wooden finish border
+    borderColor: '#4E342E', // Dark premium wooden border
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.45,
+    shadowOpacity: 0.5,
     shadowRadius: 15,
     elevation: 12,
   },
   board: {
-    width: SIZE,
-    height: SIZE,
+    width: BOARD.size,
+    height: BOARD.size,
     backgroundColor: CLASSIC_COLORS.boardBg,
     position: 'relative',
   },
-  row: { flexDirection: 'row', height: CELL },
+  row: { flexDirection: 'row', height: BOARD.cellSize },
   cell: {
-    width: CELL,
-    height: CELL,
+    width: BOARD.cellSize,
+    height: BOARD.cellSize,
     borderWidth: 0.5,
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
   },
   safeCell: {
-    borderColor: 'rgba(0,0,0,0.1)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.15)',
   },
-  star: { fontSize: CELL * 0.5, lineHeight: CELL * 0.52 },
+  shieldIcon: {
+    position: 'absolute',
+    opacity: 0.6,
+  },
+  star: { fontSize: BOARD.cellSize * 0.5, lineHeight: BOARD.cellSize * 0.52 },
   homeBaseOverlay: {
     position: 'absolute',
-    borderRadius: 2,
-    borderWidth: 2,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.2)', // Sleek border for bases
   },
   spawnCircle: {
     position: 'absolute',
-    borderWidth: 2,
+    backgroundColor: '#FFFFFF', // Bright white spawn platform
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 4,
   },
   centerHomeContainer: {
     position: 'absolute',
-    top: 6 * CELL,
-    left: 6 * CELL,
-    width: CELL * 3,
-    height: CELL * 3,
+    top: 6 * BOARD.cellSize,
+    left: 6 * BOARD.cellSize,
+    width: BOARD.cellSize * 3,
+    height: BOARD.cellSize * 3,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: CLASSIC_COLORS.border,
   },
   trianglesPattern: {
@@ -400,10 +445,10 @@ const styles = StyleSheet.create({
     height: 0,
     backgroundColor: 'transparent',
     borderStyle: 'solid',
-    borderLeftWidth: CELL * 1.43,
-    borderRightWidth: CELL * 1.43,
-    borderTopWidth: CELL * 1.43,
-    borderBottomWidth: CELL * 1.43,
+    borderLeftWidth: BOARD.cellSize * 1.43,
+    borderRightWidth: BOARD.cellSize * 1.43,
+    borderTopWidth: BOARD.cellSize * 1.43,
+    borderBottomWidth: BOARD.cellSize * 1.43,
     borderLeftColor: CLASSIC_COLORS.red,
     borderTopColor: CLASSIC_COLORS.blue,
     borderRightColor: CLASSIC_COLORS.green,
@@ -413,12 +458,18 @@ const styles = StyleSheet.create({
     position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#FFF',
+    width: BOARD.cellSize * 1.2,
+    height: BOARD.cellSize * 1.2,
+    borderRadius: BOARD.cellSize * 0.6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,
   },
   centerStar: {
-    fontSize: CELL * 0.7,
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 1,
+    fontSize: BOARD.cellSize * 0.7,
   },
 });
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Animated, TouchableWithoutFeedback } from 'react-native';
+import { View, StyleSheet, Animated, TouchableWithoutFeedback, TouchableOpacity } from 'react-native';
 import { playSound } from '../utils/sounds';
 
 const COLORS = {
@@ -10,22 +10,46 @@ const COLORS = {
 };
 
 const Piece3D = ({ color = 'red', selected = false, onPress, moving = false, size = 40, style }) => {
-  const theme = COLORS[color];
+  const theme = COLORS[color] || COLORS.red;
   const translateY = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(1)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (selected) {
-      Animated.parallel([
-        Animated.spring(translateY, {
-          toValue: -12,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scale, {
-          toValue: 1.15,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      Animated.spring(scale, {
+        toValue: 1.15,
+        useNativeDriver: true,
+      }).start();
+
+      let isLooping = true;
+      const startLoop = () => {
+        if (!isLooping) return;
+        
+        Animated.parallel([
+          Animated.sequence([
+            Animated.timing(glowAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+            Animated.timing(glowAnim, { toValue: 0, duration: 800, useNativeDriver: true })
+          ]),
+          Animated.sequence([
+            Animated.timing(translateY, { toValue: -12, duration: 800, useNativeDriver: true }),
+            Animated.timing(translateY, { toValue: -8, duration: 800, useNativeDriver: true })
+          ])
+        ]).start(() => {
+          if (isLooping) {
+            startLoop();
+          }
+        });
+      };
+      
+      startLoop();
+      
+      return () => {
+        isLooping = false;
+        glowAnim.stopAnimation();
+        translateY.stopAnimation();
+        scale.stopAnimation();
+      };
     } else {
       Animated.parallel([
         Animated.spring(translateY, {
@@ -37,149 +61,145 @@ const Piece3D = ({ color = 'red', selected = false, onPress, moving = false, siz
           useNativeDriver: true,
         }),
       ]).start();
+      
+      glowAnim.stopAnimation();
+      glowAnim.setValue(0);
     }
-  }, [selected, translateY, scale]);
+  }, [selected, translateY, scale, glowAnim]);
 
   useEffect(() => {
     if (moving) {
       Animated.sequence([
         Animated.timing(translateY, {
           toValue: -15,
-          duration: 300,
+          duration: 250,
           useNativeDriver: true,
         }),
-        Animated.spring(translateY, {
+        Animated.timing(translateY, {
           toValue: 0,
-          duration: 200,
+          duration: 250,
           useNativeDriver: true,
-        }),
+        })
       ]).start();
-
       playSound('move');
     }
   }, [moving, translateY]);
 
+  // Dimensions based on size
+  const headSize = size * 0.45;
+  const bodyWidth = size * 0.55;
+  const bodyHeight = size * 0.6;
+  const baseWidth = size * 0.75;
+  const baseHeight = size * 0.25;
+
   return (
-    <TouchableWithoutFeedback onPress={onPress}>
-      <View style={[style, { width: size, height: size, alignItems: 'center', justifyContent: 'flex-end' }]}>
-        <Animated.View style={[
-          styles.container,
-          {
-            transform: [
-              { scale: size / 50 },
-              { translateY },
-              { scale }
-            ]
-          }
-        ]}>
-        
-        {/* Ball Head */}
-        <View style={[styles.ballHead, { backgroundColor: theme.body }]}>
-          <View style={[styles.specularBall, { backgroundColor: theme.highlight }]} />
-        </View>
-        
-        {/* Neck */}
-        <View style={[styles.neck, { backgroundColor: theme.body }]} />
-        
-        {/* Cone Body */}
-        <View style={[styles.coneBody, { backgroundColor: theme.body }]}>
-          <View style={[styles.specularBody, { backgroundColor: theme.highlight }]} />
-        </View>
-        
-        {/* Base */}
-        <View style={[
-          styles.base, 
-          { backgroundColor: theme.base },
-          selected && styles.selectedBase
-        ]} />
-        
-        {/* Shadow (Bottom Layer) */}
-        <View style={styles.shadow} />
-        
+    <TouchableOpacity 
+      activeOpacity={0.8}
+      onPress={onPress} 
+      disabled={!selected && !moving}
+      style={{
+        width: size + 40,
+        height: size * 1.2 + 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <View style={[style, { width: size, height: size * 1.2, alignItems: 'center', justifyContent: 'flex-end' }]}>
+        <Animated.View style={{
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          transform: [{ translateY }, { scale }]
+        }}>
+          {/* Glowing Aura when Selectable */}
+          {selected && (
+            <Animated.View style={{
+              position: 'absolute',
+              bottom: size * 0.0,
+              width: baseWidth * 1.6,
+              height: baseWidth * 1.6, // Circular glow
+              borderRadius: baseWidth * 0.8,
+              backgroundColor: theme.highlight, // Glow matches the piece's color
+              opacity: glowAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0.2, 0.7] // Pulsates opacity
+              }),
+              transform: [{ scale: glowAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0.8, 1.2] // Pulsates size
+              })}],
+              zIndex: 0,
+            }} />
+          )}
+
+          {/* Head */}
+          <View style={{
+            width: headSize,
+            height: headSize,
+            borderRadius: headSize / 2,
+            backgroundColor: theme.body,
+            zIndex: 3,
+            shadowColor: '#000',
+            shadowOffset: { width: -3, height: 4 },
+            shadowOpacity: 0.5,
+            shadowRadius: 4,
+            elevation: 6,
+          }}>
+            {/* Enhanced Glare for premium 3D effect */}
+            <View style={{
+              position: 'absolute',
+              top: '8%',
+              left: '12%',
+              width: '45%',
+              height: '45%',
+              borderRadius: headSize,
+              backgroundColor: 'rgba(255,255,255,0.6)',
+              transform: [{ rotate: '-35deg' }]
+            }} />
+          </View>
+
+          {/* Body */}
+          <View style={{
+            width: bodyWidth,
+            height: bodyHeight,
+            backgroundColor: theme.body,
+            borderTopLeftRadius: 5,
+            borderTopRightRadius: 5,
+            borderBottomLeftRadius: 2,
+            borderBottomRightRadius: 2,
+            marginTop: -size * 0.1, // hide under head
+            zIndex: 2,
+            transform: [{ perspective: 100 }, { rotateX: '35deg' }], // 3D cone perspective
+            elevation: 3,
+          }} />
+
+          {/* Base */}
+          <View style={[
+            {
+              width: baseWidth,
+              height: baseHeight,
+              borderRadius: baseWidth / 2,
+              backgroundColor: theme.body, // Single color!
+              marginTop: -size * 0.15,
+              zIndex: 1,
+              elevation: 2,
+            },
+            selected && { borderWidth: 2, borderColor: theme.highlight } // Border matches piece color
+          ]} />
+
+          {/* Shadow */}
+          <View style={{
+            position: 'absolute',
+            bottom: -size * 0.05,
+            width: size * 0.7,
+            height: size * 0.2,
+            borderRadius: size * 0.35,
+            backgroundColor: 'rgba(0,0,0,0.3)',
+            zIndex: 0,
+          }} />
         </Animated.View>
       </View>
-    </TouchableWithoutFeedback>
+    </TouchableOpacity>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    width: 50,
-    height: 70,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 4,
-    elevation: 8,
-    // Add margin bottom so the base aligns inside the bounding box
-    marginBottom: -15,
-  },
-  ballHead: {
-    width: 22, 
-    height: 22,
-    borderRadius: 11,
-    marginBottom: -4,
-    zIndex: 5,
-  },
-  specularBall: {
-    position: 'absolute',
-    width: 6,
-    height: 4,
-    borderRadius: 3,
-    top: 3,
-    left: 4,
-    transform: [{ rotate: '-30deg' }],
-  },
-  neck: {
-    width: 10, 
-    height: 8,
-    borderRadius: 4,
-    marginTop: -2,
-    zIndex: 4,
-  },
-  coneBody: {
-    width: 36, 
-    height: 42,
-    borderBottomLeftRadius: 18,
-    borderBottomRightRadius: 18,
-    borderTopLeftRadius: 6,
-    borderTopRightRadius: 6,
-    zIndex: 3,
-    marginTop: -4,
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  specularBody: {
-    position: 'absolute',
-    width: 6,
-    height: 20,
-    borderRadius: 3,
-    top: 6,
-    left: 6,
-    transform: [{ rotate: '-15deg' }],
-  },
-  base: {
-    width: 42,
-    height: 10,
-    borderRadius: 21, // slightly wide oval base
-    marginTop: -6,
-    zIndex: 2,
-  },
-  selectedBase: {
-    borderWidth: 2,
-    borderColor: '#FFD700', // Golden ring border
-  },
-  shadow: {
-    width: 46,
-    height: 12,
-    borderRadius: 23,
-    backgroundColor: 'rgba(0,0,0,0.25)',
-    position: 'absolute',
-    bottom: -2,
-    zIndex: 1,
-  }
-});
 
 export default Piece3D;

@@ -1,7 +1,7 @@
 import { io } from 'socket.io-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const SOCKET_URL = 'https://ludocash.onrender.com';
+const SOCKET_URL = 'https://ludocash.onrender.com'; // Switched to production Render URL
 
 let socket = null;
 
@@ -17,7 +17,7 @@ export const connectSocket = async () => {
   if (!socket) {
     socket = io(SOCKET_URL, {
       auth: { token },
-      transports: ['polling', 'websocket'],
+      transports: ['websocket'],
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 2000,

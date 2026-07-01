@@ -3,18 +3,25 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar } from 
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { COLORS, GRADIENTS, SPACING, RADIUS } from '../utils/theme';
+import { playSound } from '../utils/sounds';
 
-const PrivacyScreen = ({ navigation }) => {
-  return (
-    <LinearGradient colors={GRADIENTS.background} style={styles.container}>
+const PrivacyScreen = ({
+  navigation
+}) => {
+  return <LinearGradient colors={GRADIENTS.background} style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
       
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={styles.backButton} onPress={() => {
+        playSound("button_click");
+        return navigation.goBack();
+      }}>
           <Icon name="chevron-back" size={24} color={COLORS.white} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Privacy Policy</Text>
-        <View style={{ width: 40 }} />
+        <View style={{
+        width: 40
+      }} />
       </View>
 
       <ScrollView style={styles.contentContainer} showsVerticalScrollIndicator={false}>
@@ -39,58 +46,59 @@ const PrivacyScreen = ({ navigation }) => {
             We take reasonable measures to help protect information about you from loss, theft, misuse, unauthorized access, disclosure, alteration, and destruction.
           </Text>
 
-          <View style={{ height: 40 }} />
+          <View style={{
+          height: 40
+        }} />
         </View>
       </ScrollView>
-    </LinearGradient>
-  );
+    </LinearGradient>;
 };
-
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: {
+    flex: 1
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: SPACING.md,
     paddingTop: SPACING.lg + 10,
-    backgroundColor: 'rgba(0,0,0,0.2)',
+    backgroundColor: 'rgba(0,0,0,0.2)'
   },
   backButton: {
     width: 40,
     height: 40,
-    borderRadius: RADIUS.full,
+    borderRadius: RADIUS.round,
     backgroundColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   headerTitle: {
     color: COLORS.white,
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '700'
   },
   contentContainer: {
-    padding: SPACING.md,
+    padding: SPACING.md
   },
   card: {
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: RADIUS.lg,
     padding: SPACING.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.1)'
   },
   title: {
     color: COLORS.gold,
     fontSize: 16,
     fontWeight: '800',
     marginTop: SPACING.lg,
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.sm
   },
   text: {
     color: COLORS.textSecondary,
     fontSize: 14,
-    lineHeight: 22,
-  },
+    lineHeight: 22
+  }
 });
-
 export default PrivacyScreen;

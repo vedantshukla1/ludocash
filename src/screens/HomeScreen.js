@@ -1,61 +1,54 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  StatusBar,
-  Dimensions,
-  Image,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Dimensions, Image } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../context/AuthContext';
 import { COLORS, GRADIENTS, SPACING, RADIUS, SHADOWS, TYPOGRAPHY } from '../utils/theme';
+import { playSound } from '../utils/sounds';
 
-const { width } = Dimensions.get('window');
-
-const HomeScreen = ({ navigation }) => {
-  const { user, logout } = useAuth();
-
-  const gameModes = [
-    {
-      id: '2player',
-      title: '2 Player',
-      icon: 'account-multiple',
-      color: GRADIENTS.primary,
-    },
-    {
-      id: '4player',
-      title: '4 Player',
-      icon: 'account-group',
-      color: GRADIENTS.secondary,
-    },
-    {
-      id: 'private',
-      title: 'Play with Friends',
-      icon: 'account-heart',
-      color: GRADIENTS.gold,
-    },
-    {
-      id: 'computer',
-      title: 'Play vs Computer',
-      icon: 'desktop-classic',
-      color: GRADIENTS.darkCard,
-    },
-  ];
-
-  const handleModeSelect = (mode) => {
+const {
+  width
+} = Dimensions.get('window');
+const HomeScreen = ({
+  navigation
+}) => {
+  const {
+    user,
+    logout
+  } = useAuth();
+  const gameModes = [{
+    id: '2player',
+    title: '2 Player',
+    icon: 'account-multiple',
+    color: GRADIENTS.primary
+  }, {
+    id: '4player',
+    title: '4 Player',
+    icon: 'account-group',
+    color: GRADIENTS.secondary
+  }, {
+    id: 'tournament',
+    title: 'Tournament',
+    icon: 'trophy',
+    color: GRADIENTS.gold
+  }, {
+    id: 'computer',
+    title: 'Play vs Computer',
+    icon: 'desktop-classic',
+    color: GRADIENTS.darkCard
+  }];
+  const handleModeSelect = mode => {
     if (mode.id === 'computer') {
-      navigation.navigate('ComputerGame', { playersCount: 2 });
+      navigation.navigate('ComputerGame', {
+        playersCount: 2
+      });
     } else {
-      navigation.navigate('SelectFee', { mode });
+      navigation.navigate('SelectFee', {
+        mode
+      });
     }
   };
-
-  return (
-    <View style={styles.container}>
+  return <View style={styles.container}>
       <StatusBar backgroundColor={COLORS.background} barStyle="light-content" />
       <LinearGradient colors={GRADIENTS.background} style={styles.background} />
 
@@ -63,7 +56,9 @@ const HomeScreen = ({ navigation }) => {
       <View style={styles.header}>
         <View style={styles.userInfo}>
           <View style={styles.avatarContainer}>
-            <Icon name="account" size={24} color={COLORS.primary} />
+            {user?.avatar ? <Image source={{
+            uri: user.avatar
+          }} style={styles.avatarImage} /> : <Icon name="account" size={24} color={COLORS.primary} />}
           </View>
           <View>
             <Text style={styles.greeting}>Welcome back,</Text>
@@ -73,10 +68,10 @@ const HomeScreen = ({ navigation }) => {
           </View>
         </View>
 
-        <TouchableOpacity 
-          style={styles.walletButton}
-          onPress={() => navigation.navigate('Wallet')}
-        >
+        <TouchableOpacity style={styles.walletButton} onPress={() => {
+        playSound("button_click");
+        return navigation.navigate('Wallet');
+      }}>
           <Icon name="wallet" size={20} color={COLORS.secondary} />
           <Text style={styles.balanceText}>
             ₹{user?.wallet?.balance || '0.00'}
@@ -87,16 +82,23 @@ const HomeScreen = ({ navigation }) => {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         
         {/* Banner */}
-        <LinearGradient
-          colors={GRADIENTS.gold}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.banner}
-        >
+        <LinearGradient colors={GRADIENTS.gold} start={{
+        x: 0,
+        y: 0
+      }} end={{
+        x: 1,
+        y: 0
+      }} style={styles.banner}>
           <View style={styles.bannerContent}>
             <Text style={styles.bannerTitle}>Play & Win Real Cash!</Text>
             <Text style={styles.bannerSubtitle}>Join tournaments everyday</Text>
-            <TouchableOpacity style={styles.bannerButton}>
+            <TouchableOpacity 
+              style={styles.bannerButton}
+              onPress={() => {
+                playSound("button_click");
+                handleModeSelect(gameModes.find(m => m.id === 'tournament'));
+              }}
+            >
               <Text style={styles.bannerButtonText}>Join Now</Text>
             </TouchableOpacity>
           </View>
@@ -106,37 +108,32 @@ const HomeScreen = ({ navigation }) => {
         {/* Game Modes */}
         <Text style={styles.sectionTitle}>Select Game Mode</Text>
         <View style={styles.modesGrid}>
-          {gameModes.map((mode) => (
-            <TouchableOpacity
-              key={mode.id}
-              style={styles.modeCardContainer}
-              onPress={() => handleModeSelect(mode)}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={mode.color}
-                style={styles.modeCard}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
+          {gameModes.map(mode => <TouchableOpacity key={mode.id} style={styles.modeCardContainer} onPress={() => {
+          playSound("button_click");
+          return handleModeSelect(mode);
+        }} activeOpacity={0.8}>
+              <LinearGradient colors={mode.color} style={styles.modeCard} start={{
+            x: 0,
+            y: 0
+          }} end={{
+            x: 1,
+            y: 1
+          }}>
                 <Icon name={mode.icon} size={40} color={COLORS.white} />
                 <Text style={styles.modeTitle}>{mode.title}</Text>
               </LinearGradient>
-            </TouchableOpacity>
-          ))}
+            </TouchableOpacity>)}
         </View>
       </ScrollView>
-    </View>
-  );
+    </View>;
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.background
   },
   background: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFillObject
   },
   header: {
     flexDirection: 'row',
@@ -144,11 +141,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: SPACING.md,
     paddingTop: SPACING.xl,
-    backgroundColor: 'rgba(15, 30, 61, 0.8)',
+    backgroundColor: 'rgba(15, 30, 61, 0.8)'
   },
   userInfo: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   avatarContainer: {
     width: 40,
@@ -158,15 +155,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: SPACING.sm,
+    overflow: 'hidden'
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%'
   },
   greeting: {
     ...TYPOGRAPHY.small,
-    color: COLORS.textMuted,
+    color: COLORS.textMuted
   },
   username: {
     ...TYPOGRAPHY.body,
     fontWeight: 'bold',
-    color: COLORS.white,
+    color: COLORS.white
   },
   walletButton: {
     flexDirection: 'row',
@@ -176,16 +178,16 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm,
     borderRadius: RADIUS.round,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.2)'
   },
   balanceText: {
     ...TYPOGRAPHY.body,
     fontWeight: 'bold',
     color: COLORS.white,
-    marginLeft: SPACING.xs,
+    marginLeft: SPACING.xs
   },
   scrollContent: {
-    padding: SPACING.md,
+    padding: SPACING.md
   },
   banner: {
     borderRadius: RADIUS.lg,
@@ -193,71 +195,72 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     overflow: 'hidden',
     marginBottom: SPACING.xl,
-    ...SHADOWS.gold,
+    ...SHADOWS.gold
   },
   bannerContent: {
     flex: 1,
-    zIndex: 1,
+    zIndex: 1
   },
   bannerTitle: {
     ...TYPOGRAPHY.h3,
     color: COLORS.background,
-    marginBottom: SPACING.xs,
+    marginBottom: SPACING.xs
   },
   bannerSubtitle: {
     ...TYPOGRAPHY.small,
     color: 'rgba(15, 30, 61, 0.8)',
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.md
   },
   bannerButton: {
     backgroundColor: COLORS.background,
     alignSelf: 'flex-start',
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.round,
+    borderRadius: RADIUS.round
   },
   bannerButtonText: {
     ...TYPOGRAPHY.small,
     fontWeight: 'bold',
-    color: COLORS.white,
+    color: COLORS.white
   },
   bannerIcon: {
     position: 'absolute',
     right: -10,
     bottom: -10,
-    transform: [{ rotate: '-15deg' }],
+    transform: [{
+      rotate: '-15deg'
+    }]
   },
   sectionTitle: {
     ...TYPOGRAPHY.h3,
     color: COLORS.white,
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.md
   },
   modesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'space-between'
   },
   modeCardContainer: {
     width: (width - SPACING.md * 3) / 2,
     aspectRatio: 1,
     marginBottom: SPACING.md,
     borderRadius: RADIUS.lg,
-    ...SHADOWS.medium,
+    ...SHADOWS.medium
   },
   modeCard: {
     flex: 1,
     borderRadius: RADIUS.lg,
     padding: SPACING.md,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   modeTitle: {
     ...TYPOGRAPHY.body,
     fontWeight: 'bold',
     color: COLORS.white,
     marginTop: SPACING.sm,
-    textAlign: 'center',
-  },
+    textAlign: 'center'
+  }
 });
-
 export default HomeScreen;
