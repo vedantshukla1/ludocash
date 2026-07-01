@@ -9,7 +9,7 @@ import { COLORS, GRADIENTS, RADIUS, SPACING, SHADOWS } from '../utils/theme';
 import { playSound } from '../utils/sounds';
 
 GoogleSignin.configure({
-  webClientId: '425038451474-3hjpa8763184ik1ncl5792egdomn1rjj.apps.googleusercontent.com'
+  webClientId: '425038451474-17dq813646aujkpetkldijkhapndtemf.apps.googleusercontent.com'
 });
 const LoginScreen = ({
   navigation
