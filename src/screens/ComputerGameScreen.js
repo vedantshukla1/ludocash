@@ -40,9 +40,9 @@ const ComputerGameScreen = ({
     playersCount = 2
   } = route.params || {};
   const activeColors = React.useMemo(() => {
-    if (playersCount === 2) return ['red', 'green'];
-    if (playersCount === 3) return ['red', 'blue', 'green'];
-    return ['red', 'blue', 'green', 'yellow'];
+    if (playersCount === 2) return ['yellow', 'blue'];
+    if (playersCount === 3) return ['yellow', 'blue', 'green'];
+    return ['yellow', 'blue', 'green', 'red'];
   }, [playersCount]);
   const getNextTurnColor = currentColor => {
     const idx = activeColors.indexOf(currentColor);
@@ -52,13 +52,13 @@ const ComputerGameScreen = ({
     const list = [{
       userId: user?._id || 'player',
       name: user?.name || 'Player',
-      color: 'red'
+      color: 'yellow'
     }];
     if (playersCount === 2) {
       list.push({
-        userId: 'computer_green',
+        userId: 'computer_blue',
         name: 'Computer 🤖',
-        color: 'green'
+        color: 'blue'
       });
     } else if (playersCount === 3) {
       list.push({
@@ -83,15 +83,15 @@ const ComputerGameScreen = ({
         color: 'green'
       });
       list.push({
-        userId: 'computer_yellow',
+        userId: 'computer_red',
         name: 'Computer 3 🤖',
-        color: 'yellow'
+        color: 'red'
       });
     }
     return list;
   });
   const [gameState, setGameState] = useState(() => ({
-    currentTurn: 'red',
+    currentTurn: 'yellow',
     diceRolled: false,
     diceValue: null,
     consecutiveSixes: 0,
@@ -179,7 +179,7 @@ const ComputerGameScreen = ({
 
   // ─── Trigger Computer Move ───────────────────────────────────────────────────
   useEffect(() => {
-    if (gameState.currentTurn !== 'red' && !gameState.diceRolled && !winner) {
+    if (gameState.currentTurn !== 'yellow' && !gameState.diceRolled && !winner) {
       if (turnTimerRef.current) clearTimeout(turnTimerRef.current);
       turnTimerRef.current = setTimeout(handleComputerTurn, 1500);
     } else {
@@ -196,9 +196,9 @@ const ComputerGameScreen = ({
       const allHome = entry.pieces.every(p => p.state === 'home');
       if (allHome) {
         setWinner(entry.color);
-        playSound(entry.color === 'red' ? 'win' : 'lose');
+        playSound(entry.color === 'yellow' ? 'win' : 'lose');
         const winnerName = players.find(p => p.color === entry.color)?.name || 'Player';
-        CustomAlert.alert(entry.color === 'red' ? 'Victory! 🎉' : 'Game Over 🤖', entry.color === 'red' ? 'You defeated the computer!' : `${winnerName} won this time.`, [{
+        CustomAlert.alert(entry.color === 'yellow' ? 'Victory! 🎉' : 'Game Over 🤖', entry.color === 'yellow' ? 'You defeated the computer!' : `${winnerName} won this time.`, [{
           text: 'Exit to Lobby',
           onPress: () => navigation.replace('Main')
         }]);
@@ -221,12 +221,12 @@ const ComputerGameScreen = ({
 
   // Roll Dice (User)
   const rollDice = () => {
-    if (gameStateRef.current.currentTurn !== 'red' || gameStateRef.current.diceRolled || rolling) return;
+    if (gameStateRef.current.currentTurn !== 'yellow' || gameStateRef.current.diceRolled || rolling) return;
     setRolling(true);
     playSound('dice_roll');
     setTimeout(() => {
-      // Safety check: verify it is still red's turn when the roll resolves
-      if (gameStateRef.current.currentTurn !== 'red') {
+      // Safety check: verify it is still yellow's turn when the roll resolves
+      if (gameStateRef.current.currentTurn !== 'yellow') {
         setRolling(false);
         return;
       }
@@ -245,7 +245,7 @@ const ComputerGameScreen = ({
             consecutiveSixes: 0,
           }));
           ToastAndroid.show('3 sixes! Turn skipped', ToastAndroid.SHORT);
-          setTimeout(() => passTurn(getNextTurnColor('red')), 1200);
+          setTimeout(() => passTurn(getNextTurnColor('yellow')), 1200);
           return;
         }
         setGameState(prev => ({ ...prev, consecutiveSixes: newCount }));
@@ -255,7 +255,7 @@ const ComputerGameScreen = ({
 
       const validMoves = getMovablePieces({
         pieces: gameStateRef.current.pieces
-      }, 'red', roll);
+      }, 'yellow', roll);
       setRolling(false);
       setGameState(prev => ({
         ...prev,
@@ -264,20 +264,20 @@ const ComputerGameScreen = ({
       }));
       if (validMoves.length === 0) {
         // No moves -> Pass turn
-        setTimeout(() => passTurn(getNextTurnColor('red')), 1200);
+        setTimeout(() => passTurn(getNextTurnColor('yellow')), 1200);
       } else {
-        setMovablePieces({ color: 'red', pieces: validMoves });
+        setMovablePieces({ color: 'yellow', pieces: validMoves });
       }
     }, 600);
   };
 
   // Move Piece (User)
   const handlePiecePress = (color, pieceId) => {
-    if (gameStateRef.current.currentTurn !== 'red' || color !== 'red') return;
+    if (gameStateRef.current.currentTurn !== 'yellow' || color !== 'yellow') return;
     const movableIds = (movablePieces?.pieces || []).map(Number);
     if (!movableIds.includes(Number(pieceId))) return;
     playSound('piece_select');
-    movePiece('red', pieceId, gameStateRef.current.diceValue);
+    movePiece('yellow', pieceId, gameStateRef.current.diceValue);
   };
 
   // Ludo Move Logic (shared)
@@ -396,7 +396,7 @@ const ComputerGameScreen = ({
   const handleComputerTurn = () => {
     const botColor = gameStateRef.current.currentTurn;
     // Safety check: verify it is a computer's turn
-    if (botColor === 'red' || winner) return;
+    if (botColor === 'yellow' || winner) return;
     setRolling(true);
     playSound('dice_roll');
     setTimeout(() => {
@@ -490,7 +490,7 @@ const ComputerGameScreen = ({
         [curColor]: prev[curColor] + 1
       };
       if (nextCounts[curColor] >= 3) {
-        if (curColor === 'red') {
+        if (curColor === 'yellow') {
           setWinner('computer_win');
           CustomAlert.alert('Game Over 🚫', 'You missed 3 turns and lost the game.', [{
             text: 'Exit to Lobby',
@@ -501,7 +501,7 @@ const ComputerGameScreen = ({
           passTurn(getNextTurnColor(curColor));
         }
       } else {
-        if (curColor === 'red') {
+        if (curColor === 'yellow') {
           autoRollAndMoveHuman();
         } else {
           passTurn(getNextTurnColor(curColor));
@@ -618,7 +618,7 @@ const ComputerGameScreen = ({
           backgroundColor: PLAYER_COLORS[gameState.currentTurn]?.primary || COLORS.white
         }]} />
           <Text style={styles.turnText}>
-            {gameState.currentTurn === 'red' ? 'Your Turn' : `${players.find(p => p.color === gameState.currentTurn)?.name || 'Computer'}'s Turn`} ({timeLeft}s)
+            {gameState.currentTurn === 'yellow' ? 'Your Turn' : `${players.find(p => p.color === gameState.currentTurn)?.name || 'Computer'}'s Turn`} ({timeLeft}s)
           </Text>
         </View>
 
@@ -641,18 +641,18 @@ const ComputerGameScreen = ({
       <View style={styles.gameContainer}>
         {/* Top Player Row: Red (Left) and Blue (Right) */}
         <View style={styles.topPlayerRow}>
-          {renderPlayerProfile(redPlayer, 'red', renderDiceSlot(redPlayer, 'red', rollDice, true))}
+          {renderPlayerProfile(redPlayer, 'red', renderDiceSlot(redPlayer, 'red', () => {}, false))}
           {renderPlayerProfile(bluePlayer, 'blue', renderDiceSlot(bluePlayer, 'blue', () => {}, false))}
         </View>
 
         {/* Ludo Board */}
         <View style={styles.boardContainer}>
-          <LudoBoard gameState={gameState} players={players} myColor="red" movablePieces={movablePieces} onPiecePress={handlePiecePress} />
+          <LudoBoard gameState={gameState} players={players} myColor="yellow" movablePieces={movablePieces} onPiecePress={handlePiecePress} />
         </View>
 
         {/* Bottom Player Row: Yellow (Left) and Green (Right) */}
         <View style={styles.bottomPlayerRow}>
-          {renderPlayerProfile(yellowPlayer, 'yellow', renderDiceSlot(yellowPlayer, 'yellow', () => {}, false))}
+          {renderPlayerProfile(yellowPlayer, 'yellow', renderDiceSlot(yellowPlayer, 'yellow', rollDice, true))}
           {renderPlayerProfile(greenPlayer, 'green', renderDiceSlot(greenPlayer, 'green', () => {}, false))}
         </View>
       </View>
