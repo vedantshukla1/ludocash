@@ -113,7 +113,6 @@ export const isSfxEnabled = () => sfxEnabled;
  * Release all sound resources (call on app unmount)
  */
 export const releaseSounds = () => {
-  Object.values(sounds).forEach((s) => s && s.release());
   if (bgMusic) bgMusic.release();
 };
 

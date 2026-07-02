@@ -84,6 +84,14 @@ const SelectFeeScreen = ({
           fee: selectedFee
         });
       }
+      // Clean up all socket listeners on unmount
+      const socket = getSocket();
+      if (socket) {
+        socket.off('pool_joined');
+        socket.off('game_found');
+        socket.off('insufficient_balance');
+        socket.off('error_event');
+      }
     };
   }, [searching, selectedFee]);
   useEffect(() => {
@@ -171,6 +179,8 @@ const SelectFeeScreen = ({
     if (socket) {
       socket.off('pool_joined');
       socket.off('game_found');
+      socket.off('insufficient_balance');
+      socket.off('error_event');
     }
     setSearching(false);
     setWaitingCount(0);
@@ -190,7 +200,7 @@ const SelectFeeScreen = ({
       }}>
           <Text style={styles.backBtn}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{mode.emoji} {mode.title}</Text>
+        <Text style={styles.headerTitle}>{mode.title}</Text>
         <View style={styles.balanceBadge}>
           <Text style={styles.balanceText}>₹{(user?.wallet?.balance || 0).toFixed(0)}</Text>
         </View>
@@ -280,7 +290,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: SPACING.md,
-    paddingTop: SPACING.lg,
     paddingTop: SPACING.lg,
     backgroundColor: COLORS.surface
   },

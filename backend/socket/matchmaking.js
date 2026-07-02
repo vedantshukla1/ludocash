@@ -86,6 +86,7 @@ const tryStartMatch = async (io, mode, fee) => {
   const matched = pool.splice(0, config.players);
   if (pool.length === 0) {
     if (pool.botTimeout) clearTimeout(pool.botTimeout);
+    pool.botTimeout = null;
     pools.delete(key);
   }
 
@@ -121,8 +122,24 @@ const tryStartMatch = async (io, mode, fee) => {
   if (freshUsers.length < config.players) {
     freshUsers.forEach(({ entry }) => {
       pool.push(entry);
-      pools.set(key, pool);
     });
+    pools.set(key, pool);
+    
+    // Restart bot timeout if we placed users back and it was cleared
+    if (!pool.botTimeout && pool.length > 0) {
+      pool.botTimeout = setTimeout(async () => {
+        const currentPool = pools.get(key);
+        if (currentPool && currentPool.length > 0 && currentPool.length < config.players) {
+          const botsNeeded = config.players - currentPool.length;
+          for (let i = 0; i < botsNeeded; i++) {
+            currentPool.push(generateBotEntry());
+          }
+          await broadcastWaitingCount(io, mode, fee);
+          await tryStartMatch(io, mode, fee);
+        }
+      }, 10000);
+    }
+
     await broadcastWaitingCount(io, mode, fee);
     return;
   }

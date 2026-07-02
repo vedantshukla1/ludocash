@@ -94,6 +94,7 @@ const ComputerGameScreen = ({
     currentTurn: 'red',
     diceRolled: false,
     diceValue: null,
+    consecutiveSixes: 0,
     pieces: activeColors.map(color => ({
       color,
       pieces: INITIAL_PIECES(color)
@@ -104,7 +105,7 @@ const ComputerGameScreen = ({
     gameStateRef.current = gameState;
   }, [gameState]);
   const [rolling, setRolling] = useState(false);
-  const [movablePieces, setMovablePieces] = useState([]);
+  const [movablePieces, setMovablePieces] = useState(null);
   const [winner, setWinner] = useState(null);
   const [timeLeft, setTimeLeft] = useState(20);
   const [timeoutCounts, setTimeoutCounts] = useState({
@@ -119,6 +120,14 @@ const ComputerGameScreen = ({
   const handleToggleSfx = () => setSfxOn(toggleSfx());
   const turnTimerRef = useRef(null);
   const playTimerRef = useRef(null);
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   // ─── Turn Timer Countdown ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -223,6 +232,27 @@ const ComputerGameScreen = ({
       }
       const roll = Math.floor(Math.random() * 6) + 1;
       ToastAndroid.show(`You rolled a ${roll}`, ToastAndroid.SHORT);
+
+      // 3 consecutive sixes rule
+      if (roll === 6) {
+        const newCount = (gameStateRef.current.consecutiveSixes || 0) + 1;
+        if (newCount >= 3) {
+          setRolling(false);
+          setGameState(prev => ({
+            ...prev,
+            diceValue: roll,
+            diceRolled: true,
+            consecutiveSixes: 0,
+          }));
+          ToastAndroid.show('3 sixes! Turn skipped', ToastAndroid.SHORT);
+          setTimeout(() => passTurn(getNextTurnColor('red')), 1200);
+          return;
+        }
+        setGameState(prev => ({ ...prev, consecutiveSixes: newCount }));
+      } else {
+        setGameState(prev => ({ ...prev, consecutiveSixes: 0 }));
+      }
+
       const validMoves = getMovablePieces({
         pieces: gameStateRef.current.pieces
       }, 'red', roll);
@@ -236,7 +266,7 @@ const ComputerGameScreen = ({
         // No moves -> Pass turn
         setTimeout(() => passTurn(getNextTurnColor('red')), 1200);
       } else {
-        setMovablePieces(validMoves);
+        setMovablePieces({ color: 'red', pieces: validMoves });
       }
     }, 600);
   };
@@ -244,7 +274,8 @@ const ComputerGameScreen = ({
   // Move Piece (User)
   const handlePiecePress = (color, pieceId) => {
     if (gameStateRef.current.currentTurn !== 'red' || color !== 'red') return;
-    if (!movablePieces.includes(pieceId)) return;
+    const movableIds = (movablePieces?.pieces || []).map(Number);
+    if (!movableIds.includes(Number(pieceId))) return;
     playSound('piece_select');
     movePiece('red', pieceId, gameStateRef.current.diceValue);
   };
@@ -377,6 +408,26 @@ const ComputerGameScreen = ({
       const roll = Math.floor(Math.random() * 6) + 1;
       ToastAndroid.show(`Computer rolled a ${roll}`, ToastAndroid.SHORT);
       setRolling(false);
+
+      // 3 consecutive sixes rule for bot
+      if (roll === 6) {
+        const newCount = (gameStateRef.current.consecutiveSixes || 0) + 1;
+        if (newCount >= 3) {
+          setGameState(prev => ({
+            ...prev,
+            diceValue: roll,
+            diceRolled: true,
+            consecutiveSixes: 0,
+          }));
+          ToastAndroid.show('Computer got 3 sixes! Turn skipped', ToastAndroid.SHORT);
+          setTimeout(() => passTurn(getNextTurnColor(botColor)), 1200);
+          return;
+        }
+        setGameState(prev => ({ ...prev, consecutiveSixes: newCount }));
+      } else {
+        setGameState(prev => ({ ...prev, consecutiveSixes: 0 }));
+      }
+
       setGameState(prev => ({
         ...prev,
         diceValue: roll,
@@ -431,6 +482,7 @@ const ComputerGameScreen = ({
     }, 600);
   };
   const handlePlayerTimeout = () => {
+    if (!isMounted.current) return;
     const curColor = gameStateRef.current.currentTurn;
     setTimeoutCounts(prev => {
       const nextCounts = {

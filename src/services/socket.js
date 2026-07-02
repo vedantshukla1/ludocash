@@ -16,7 +16,9 @@ export const connectSocket = async () => {
 
   if (!socket) {
     socket = io(SOCKET_URL, {
-      auth: { token },
+      auth: (cb) => {
+        AsyncStorage.getItem('accessToken').then(t => cb({ token: t }));
+      },
       transports: ['websocket'],
       reconnection: true,
       reconnectionAttempts: 5,

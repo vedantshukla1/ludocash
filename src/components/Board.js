@@ -320,20 +320,22 @@ const LudoBoard = ({ gameState, players, myColor, movablePieces, onPiecePress })
           if (pieces.length === 1) {
             const p = pieces[0];
             const size = isBase ? BOARD.cellSize * 0.72 : BOARD.cellSize * 0.68;
+            const touchPadding = size * 0.15;
             const centeredOffset = isBase ? (BOARD.cellSize * 1.2 - size) / 2 : (BOARD.cellSize - size) / 2;
             const topOffset = isBase ? centeredOffset - BOARD.cellSize * 0.06 : centeredOffset - BOARD.cellSize * 0.04;
+            const movable = isMovable(p.color, p.pieceId);
             
             return (
               <React.Fragment key={posKey}>
                 <AnimatedPieceWrapper 
-                  top={r * BOARD.cellSize + topOffset - 20} 
-                  left={c * BOARD.cellSize + centeredOffset - 20} 
-                  zIndex={200}
+                  top={r * BOARD.cellSize + topOffset - touchPadding} 
+                  left={c * BOARD.cellSize + centeredOffset - touchPadding} 
+                  zIndex={movable ? 300 : 200}
                 >
                   <Piece3D
                     color={p.color}
                     pieceId={p.pieceId}
-                    selected={isMovable(p.color, p.pieceId)}
+                    selected={movable}
                     onPress={() => onPiecePress(p.color, p.pieceId)}
                     size={size}
                   />
@@ -347,19 +349,21 @@ const LudoBoard = ({ gameState, players, myColor, movablePieces, onPiecePress })
                 {pieces.map((p, idx) => {
                   const offset = idx * BOARD.cellSize * 0.12;
                   const size = BOARD.cellSize * 0.48;
+                  const touchPadding = size * 0.15;
                   const cellWidth = isBase ? BOARD.cellSize * 1.2 : BOARD.cellSize;
                   const centeredOffset = (cellWidth - size) / 2;
+                  const movable = isMovable(p.color, p.pieceId);
                   return (
                     <AnimatedPieceWrapper 
                       key={`${p.color}_${p.pieceId}`}
-                      top={r * BOARD.cellSize + centeredOffset + offset - (isBase ? BOARD.cellSize * 0.06 : BOARD.cellSize * 0.04) - 20}
-                      left={c * BOARD.cellSize + centeredOffset + offset - 20}
-                      zIndex={200 + idx}
+                      top={r * BOARD.cellSize + centeredOffset + offset - (isBase ? BOARD.cellSize * 0.06 : BOARD.cellSize * 0.04) - touchPadding}
+                      left={c * BOARD.cellSize + centeredOffset + offset - touchPadding}
+                      zIndex={movable ? 300 + idx : 200 + idx}
                     >
                       <Piece3D
                         color={p.color}
                         pieceId={p.pieceId}
-                        selected={isMovable(p.color, p.pieceId)}
+                        selected={movable}
                         onPress={() => onPiecePress(p.color, p.pieceId)}
                         size={size}
                       />

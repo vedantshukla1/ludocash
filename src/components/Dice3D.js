@@ -175,7 +175,7 @@ const Dice3D = ({
     } // Glossy red dot for 1!
     ]} />);
   };
-  return <TouchableOpacity onPress={onPress} disabled={disabled || rolling} activeOpacity={0.8}>
+  return <TouchableOpacity style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }} onPress={onPress} disabled={disabled || rolling} activeOpacity={0.8}>
       <Animated.View style={[styles.container, {
       transform: [{
         translateY

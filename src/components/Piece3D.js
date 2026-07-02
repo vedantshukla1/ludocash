@@ -92,14 +92,17 @@ const Piece3D = ({ color = 'red', selected = false, onPress, moving = false, siz
   const baseWidth = size * 0.75;
   const baseHeight = size * 0.25;
 
+  const touchPadding = size * 0.15;
+
   return (
     <TouchableOpacity 
       activeOpacity={0.8}
       onPress={onPress} 
       disabled={!selected && !moving}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       style={{
-        width: size + 40,
-        height: size * 1.2 + 40,
+        width: size + touchPadding * 2,
+        height: size * 1.2 + touchPadding * 2,
         alignItems: 'center',
         justifyContent: 'center',
       }}

@@ -156,8 +156,8 @@ const ResultScreen = ({
         opacity: prizeAnim
       }]}>
             <Text style={styles.prizeLabel}>Prize Credited 💰</Text>
-            <Text style={styles.prizeAmount}>₹{result.prizeCredited}</Text>
-            {result.tdsDeducted > 0 && <Text style={styles.tdsNote}>TDS deducted: ₹{result.tdsDeducted} (30%)</Text>}
+            <Text style={styles.prizeAmount}>₹{result.winner.prize}</Text>
+            {result.winner.tds > 0 && <Text style={styles.tdsNote}>TDS deducted: ₹{result.winner.tds} (30%)</Text>}
           </Animated.View>}
 
         {/* Game summary */}

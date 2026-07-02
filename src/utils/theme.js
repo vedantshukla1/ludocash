@@ -20,6 +20,7 @@ export const COLORS = {
   green: '#00C853',
   blue: '#0052CC',
   red: '#E53935',
+  yellow: '#FFCA28',
 };
 
 export const GRADIENTS = {

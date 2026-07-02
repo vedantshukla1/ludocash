@@ -231,7 +231,7 @@ const autoRollAndMove = async (gameId) => {
     const botDestinedToWin = isBotMatch && current.game.destinedWinnerColor
       ? current.game.players.find(p => p.color === current.game.destinedWinnerColor)?.isBot === true
       : false;
-    const isRollerBot = true; // autoRollAndMove is always called for bots
+    const isRollerBot = player?.isBot || false;
 
     const dice = rollDice(isBotMatch, isRollerBot, botDestinedToWin, current.gameState);
     current.gameState.diceValue = dice;
@@ -246,8 +246,7 @@ const autoRollAndMove = async (gameId) => {
     });
 
     if (movable.length === 0) {
-      const extraTurn = dice === 6;
-      setTimeout(() => advanceTurn(gameId, extraTurn, 'no_move'), 1000); // Also delay no-move turn passing
+      setTimeout(() => advanceTurn(gameId, false, 'no_move'), 1000);
       return;
     }
 
@@ -359,11 +358,7 @@ const startTurnTimer = (gameId) => {
     }
 
     if (!current.gameState.diceRolled) {
-      if (isBotNow) {
-        await autoRollAndMove(gameId);
-      } else {
-        advanceTurn(gameId, false, 'timeout');
-      }
+      await autoRollAndMove(gameId);
     } else {
       const movable = getMovablePieces(
         current.gameState,
@@ -371,17 +366,13 @@ const startTurnTimer = (gameId) => {
         current.gameState.diceValue,
       );
       if (movable.length > 0) {
-        if (isBotNow) {
-          const bestPieceId = chooseBestAutoMove(
-            current.gameState,
-            current.gameState.currentTurn,
-            current.gameState.diceValue,
-            movable
-          );
-          await applyMove(gameId, current.gameState.currentTurn, bestPieceId, true);
-        } else {
-          advanceTurn(gameId, false, 'timeout');
-        }
+        const bestPieceId = chooseBestAutoMove(
+          current.gameState,
+          current.gameState.currentTurn,
+          current.gameState.diceValue,
+          movable
+        );
+        await applyMove(gameId, current.gameState.currentTurn, bestPieceId, true);
       } else {
         advanceTurn(gameId, current.gameState.diceValue === 6, 'timeout');
       }

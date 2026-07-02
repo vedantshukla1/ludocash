@@ -43,9 +43,7 @@ const createOrder = async (amount, userId) => {
 };
 
 const getPendingOrder = (orderId) => {
-  const order = pendingOrders.get(orderId);
-  if (order) pendingOrders.delete(orderId);
-  return order;
+  return pendingOrders.get(orderId);
 };
 
 const verifyPaymentSignature = (orderId, paymentId, signature) => {

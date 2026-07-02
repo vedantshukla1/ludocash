@@ -178,11 +178,9 @@ const creditWinnings = async (userId, grossAmount, gameId) => {
 };
 
 const recordLoss = async (userId, gameId) => {
-  const user = await User.findById(userId);
-  if (!user) return;
-  user.stats.losses += 1;
-  user.stats.gamesPlayed += 1;
-  await user.save();
+  await User.findByIdAndUpdate(userId, {
+    $inc: { 'stats.losses': 1, 'stats.gamesPlayed': 1 },
+  });
 };
 
 const createWithdrawalHold = async (userId, amount, upiId) => {
@@ -228,32 +226,58 @@ const createWithdrawalHold = async (userId, amount, upiId) => {
 };
 
 const restoreWithdrawable = async (userId, amount) => {
-  const user = await User.findById(userId);
-  if (!user) return;
-  user.wallet.withdrawable += amount;
-  user.wallet.balance += amount;
-  if (user.stats) user.stats.totalWithdrawn = Math.max(0, user.stats.totalWithdrawn - amount);
-  await user.save();
-  return user;
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const user = await User.findById(userId).session(session);
+    if (!user) {
+      await session.abortTransaction();
+      return;
+    }
+    user.wallet.withdrawable += amount;
+    user.wallet.balance += amount;
+    if (user.stats) user.stats.totalWithdrawn = Math.max(0, user.stats.totalWithdrawn - amount);
+    await user.save({ session });
+    await session.commitTransaction();
+    return user;
+  } catch (err) {
+    await session.abortTransaction();
+    throw err;
+  } finally {
+    session.endSession();
+  }
 };
 
 const creditBonus = async (userId, amount, reason) => {
-  const user = await User.findById(userId);
-  if (!user) throw new Error('User not found');
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const user = await User.findById(userId).session(session);
+    if (!user) throw new Error('User not found');
 
-  user.wallet.balance += amount;
-  user.wallet.bonus += amount;
-  await user.save();
+    user.wallet.balance += amount;
+    user.wallet.bonus += amount;
+    await user.save({ session });
 
-  await Transaction.create({
-    userId,
-    type: 'bonus',
-    amount,
-    status: 'completed',
-    meta: { reason },
-  });
+    await Transaction.create(
+      [{
+        userId,
+        type: 'bonus',
+        amount,
+        status: 'completed',
+        meta: { reason },
+      }],
+      { session },
+    );
 
-  return user;
+    await session.commitTransaction();
+    return user;
+  } catch (err) {
+    await session.abortTransaction();
+    throw err;
+  } finally {
+    session.endSession();
+  }
 };
 
 module.exports = {
