@@ -266,6 +266,7 @@ router.put(
       await req.user.save();
       res.json({ user: req.user.toPublicJSON() });
     } catch (err) {
+      console.error('Profile update error:', err);
       res.status(500).json({ error: 'Profile update failed' });
     }
   },

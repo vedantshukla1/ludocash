@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "825267169923",
+    "project_id": "ludocashapp-f3229",
+    "storage_bucket": "ludocashapp-f3229.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:825267169923:android:00bf8621f56492cbdfc9b6",
+        "android_client_info": {
+          "package_name": "com.vedant.ludocash"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "825267169923-94bsgr5btm2cv6bg6sqiutbilue7m395.apps.googleusercontent.com",
+          "client_type": 3
+        },
+        {
+          "client_id": "825267169923-ad3qrp5sna7jicd7hfhdo437kiuuks78.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.vedant.ludocash",
+            "certificate_hash": "18051e8d4e608f95bd763aac6a887ab5187a739e"
+          }
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA_wfNq15K7wH2rZW7U8kMFAvuK2wVYUZA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "825267169923-94bsgr5btm2cv6bg6sqiutbilue7m395.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

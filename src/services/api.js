@@ -1,7 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BASE_URL = 'https://ludocash.onrender.com/api'; // Switched to production Render URL
+const BASE_URL = 'https://ludocash.onrender.com/api'; // Switched to live Render server
 
 const api = axios.create({
   baseURL: BASE_URL,
